@@ -3,9 +3,10 @@ import {
   useItems,
   useSdk,
   useStores,
+  useSync,
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
-import { ref, toRefs, watch } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
 
@@ -27,13 +28,14 @@ export default defineLayout({
     sidebar: () => null,
     actions: () => null,
   },
-  setup(props) {
+  setup(props, { emit }) {
     const { collection, filter, search } = toRefs(props);
     const client = useSdk();
 
+    // fields: ref(["id", "title", "_parent_id", "_sort_index", "_level"]),
     const { items, loading, error } = useItems(collection, {
       sort: ref(["-_level", "_parent_id", "_sort_index"]),
-      fields: ref(["id", "title", "_parent_id", "_sort_index", "_level"]),
+      fields: ref(["*"]),
       limit: ref(-1),
       filter,
       search,
@@ -41,8 +43,9 @@ export default defineLayout({
     });
 
     const data = ref<TItem[]>([]);
-    const primaryField = ref<string | null>(null);
-    const secondaryField = ref<string | null>(null);
+
+    const layoutOptions = useSync(props, "layoutOptions", emit);
+    const { primaryLabel, secondaryLabel } = useLayoutOptions();
 
     initialize();
 
@@ -52,8 +55,8 @@ export default defineLayout({
       loading,
       error,
       onSave,
-      primaryField,
-      secondaryField,
+      primaryLabel,
+      secondaryLabel,
     };
 
     function initialize() {
@@ -196,6 +199,43 @@ export default defineLayout({
       console.log("TBU", toBeUpdated);
 
       updateDbItems(toBeUpdated);
+    }
+
+    type TLayoutOptions = {
+      primaryLabel: string | null;
+      secondaryLabel: string | null;
+    };
+
+    function useLayoutOptions() {
+      const primaryLabel = createViewOption<string | null>(
+        "primaryLabel",
+        null
+      );
+      const secondaryLabel = createViewOption<string | null>(
+        "secondaryLabel",
+        null
+      );
+
+      return { primaryLabel, secondaryLabel };
+
+      function createViewOption<T>(
+        key: keyof TLayoutOptions,
+        defaultValue: any
+      ) {
+        return computed<T>({
+          get() {
+            return layoutOptions.value?.[key] !== undefined
+              ? layoutOptions.value[key]
+              : defaultValue;
+          },
+          set(newValue: T) {
+            layoutOptions.value = {
+              ...layoutOptions.value,
+              [key]: newValue,
+            };
+          },
+        });
+      }
     }
   },
 });
