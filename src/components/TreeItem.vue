@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Item } from "@directus/types";
+import { toRefs } from "vue";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 
 type TProps = {
@@ -7,6 +8,7 @@ type TProps = {
 };
 
 const props = defineProps<TProps>();
+const { items } = toRefs(props);
 </script>
 
 <template>
