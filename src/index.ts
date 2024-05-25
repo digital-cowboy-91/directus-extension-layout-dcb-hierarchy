@@ -7,6 +7,7 @@ import {
 import { updateItem } from "@directus/sdk";
 import { ref, toRefs, watch } from "vue";
 import LayoutComponent from "./layout.vue";
+import Options from "./options.vue";
 
 export type TItem = {
   id: string;
@@ -22,7 +23,7 @@ export default defineLayout({
   icon: "box",
   component: LayoutComponent,
   slots: {
-    options: () => null,
+    options: Options,
     sidebar: () => null,
     actions: () => null,
   },
@@ -40,10 +41,20 @@ export default defineLayout({
     });
 
     const data = ref<TItem[]>([]);
+    const primaryField = ref<string | null>(null);
+    const secondaryField = ref<string | null>(null);
 
     initialize();
 
-    return { collection, data, loading, error, onSave };
+    return {
+      collection,
+      data,
+      loading,
+      error,
+      onSave,
+      primaryField,
+      secondaryField,
+    };
 
     function initialize() {
       createRequiredFields();
