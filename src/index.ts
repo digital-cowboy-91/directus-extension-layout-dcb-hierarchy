@@ -45,6 +45,9 @@ export default defineLayout({
     const data = ref<TItem[]>([]);
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
+    watch(layoutOptions, () => {
+      console.log(layoutOptions.value);
+    });
     const { primaryLabel, secondaryLabel } = useLayoutOptions();
 
     initialize();
@@ -122,8 +125,6 @@ export default defineLayout({
         return acc;
       }, [] as TItem[]);
 
-      console.log("Structure", newData);
-
       return newData;
     }
 
@@ -194,10 +195,6 @@ export default defineLayout({
       const destructedTree = destructureData(data.value);
       const toBeUpdated = diffData(items.value as TItem[], destructedTree);
 
-      console.log("Original", items.value);
-      console.log("Modified", destructedTree);
-      console.log("TBU", toBeUpdated);
-
       updateDbItems(toBeUpdated);
     }
 
@@ -229,6 +226,8 @@ export default defineLayout({
               : defaultValue;
           },
           set(newValue: T) {
+            console.log(newValue);
+
             layoutOptions.value = {
               ...layoutOptions.value,
               [key]: newValue,

@@ -4,16 +4,16 @@ import { useSync } from "@directus/extensions-sdk";
 const props = defineProps<{
   collection: string;
   primaryLabel?: string;
-  secondaryLable?: string;
+  secondaryLabel?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:primaryLabel", primaryLabel: string): void;
-  (e: "update:secondaryLable", secondaryLable: string): void;
+  (e: "update:secondaryLabel", secondaryLabel: string): void;
 }>();
 
 const primaryLabelWritable = useSync(props, "primaryLabel", emit);
-const secondaryLableWritable = useSync(props, "secondaryLable", emit);
+const secondaryLabelWritable = useSync(props, "secondaryLabel", emit);
 </script>
 
 <template>
@@ -27,7 +27,7 @@ const secondaryLableWritable = useSync(props, "secondaryLable", emit);
   <div class="field">
     <div class="type-label">Secondary Label</div>
     <v-collection-field-template
-      v-model="secondaryLableWritable"
+      v-model="secondaryLabelWritable"
       :collection="collection"
     />
   </div>

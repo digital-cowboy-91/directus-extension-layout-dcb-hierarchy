@@ -6,6 +6,7 @@ import { VueDraggableNext as Draggable } from "vue-draggable-next";
 type TProps = {
   items: Item[];
   primaryLabel?: string;
+  secondaryLabel?: string;
   collection: string;
 };
 
@@ -17,28 +18,25 @@ const { items, primaryLabel } = toRefs(props);
   <Draggable tag="ul" :list="items" :group="{ name: 'pages' }" class="tree">
     <li v-for="item in items" :key="item.id" class="branch">
       <div>
-        <div>
-          <render-template
-            v-if="primaryLabel"
-            :collection="collection"
-            :item="item"
-            :template="primaryLabel"
-          />
-          <span v-else>{{ item.id }}</span>
-        </div>
-        <div class="debug">{{ JSON.stringify(primaryLabel) }}</div>
-        <div class="debug">{{ item.id }}</div>
-        <div class="debug">
-          LEVEL: {{ item._level }}
-          | PARENT:
-          {{ item._parent_id }}
-          | SORT: {{ item._sort_index }}
-        </div>
+        <render-template
+          v-if="primaryLabel"
+          :collection="collection"
+          :item="item"
+          :template="primaryLabel"
+        />
+        <span v-else>{{ item.id }}</span>
+        <render-template
+          v-if="secondaryLabel"
+          :collection="collection"
+          :item="item"
+          :template="secondaryLabel"
+        />
       </div>
       <TreeItem
         :items="item._children"
         class="dragArea"
         :primaryLabel="primaryLabel"
+        :secondaryLabel="secondaryLabel"
         :collection="collection"
       />
     </li>

@@ -9,7 +9,8 @@ type TProps = {
   loading: boolean;
   error?: any;
   onSave: () => void;
-  primaryLabel: string;
+  primaryLabel?: string;
+  secondaryLabel?: string;
 };
 
 const props = defineProps<TProps>();
@@ -19,12 +20,14 @@ const { data, loading, primaryLabel } = toRefs(props);
 <template>
   <div>Collection: {{ collection }}</div>
   <div>Primary Label: {{ JSON.stringify(primaryLabel) }}</div>
+  <div>Secondary Label: {{ JSON.stringify(secondaryLabel) }}</div>
   <div v-if="loading">Loading...</div>
   <div v-else>
     <button @click="onSave">Save</button>
     <TreeItem
       :items="data"
       :primaryLabel="primaryLabel"
+      :secondaryLabel="secondaryLabel"
       :collection="collection"
     />
   </div>
