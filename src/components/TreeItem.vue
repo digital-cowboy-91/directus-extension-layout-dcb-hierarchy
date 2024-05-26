@@ -5,66 +5,73 @@ import { VueDraggableNext as Draggable } from "vue-draggable-next";
 
 type TProps = {
   items: Item[];
-  primaryLabel?: string;
-  secondaryLabel?: string;
+  labelPrimary?: string;
+  labelSecondary?: string;
   collection: string;
+  isModifyEnabled: boolean;
 };
 
 const props = defineProps<TProps>();
-const { items, primaryLabel } = toRefs(props);
+const { items, labelPrimary } = toRefs(props);
 </script>
 
 <template>
-  <Draggable tag="ul" :list="items" :group="{ name: 'pages' }" class="tree">
-    <li v-for="item in items" :key="item.id" class="branch">
-      <div>
+  <Draggable
+    :disabled="!isModifyEnabled"
+    :list="items"
+    :group="{ name: 'pages' }"
+    handle=".drag-handle"
+  >
+    <div v-for="item in items" :key="item.id">
+      <v-list-item block>
+        <v-icon
+          v-if="isModifyEnabled"
+          name="drag_handle"
+          class="drag-handle"
+          left
+          @click.stop="() => {}"
+        />
         <render-template
-          v-if="primaryLabel"
+          v-if="labelPrimary"
           :collection="collection"
           :item="item"
-          :template="primaryLabel"
+          :template="labelPrimary"
         />
         <span v-else>{{ item.id }}</span>
+        <div class="spacer" />
         <render-template
-          v-if="secondaryLabel"
+          v-if="labelSecondary"
           :collection="collection"
           :item="item"
-          :template="secondaryLabel"
+          :template="labelSecondary"
         />
-      </div>
+      </v-list-item>
       <TreeItem
         :items="item._children"
-        class="dragArea"
-        :primaryLabel="primaryLabel"
-        :secondaryLabel="secondaryLabel"
+        class="tree-branch"
+        :class="{ dragArea: isModifyEnabled }"
+        :labelPrimary="labelPrimary"
+        :labelSecondary="labelSecondary"
         :collection="collection"
+        :isModifyEnabled="isModifyEnabled"
       />
-    </li>
+    </div>
   </Draggable>
 </template>
 
 <style>
-.tree,
-.tree ul {
-  list-style: none;
-}
-
-.tree {
-  padding-left: 0;
-}
-
-.branch {
-  padding-left: 1rem;
-}
-
-.debug {
-  font-size: 10px;
+.tree-branch {
+  margin: 0.5rem 0 0.5rem 2.5rem;
 }
 
 .dragArea {
   min-height: 5rem;
-  padding: 1rem;
+  padding-bottom: 0.5rem;
   background-color: rgba(255 255 255 / 0.1);
-  border-radius: 1rem;
+  border-radius: var(--theme--border-radius);
+}
+
+.drag-handle {
+  cursor: grad;
 }
 </style>

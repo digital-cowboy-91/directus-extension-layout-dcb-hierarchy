@@ -8,27 +8,30 @@ type TProps = {
   data: TItem[];
   loading: boolean;
   error?: any;
-  onSave: () => void;
-  primaryLabel?: string;
-  secondaryLabel?: string;
+  labelPrimary?: string;
+  labelSecondary?: string;
+  isModifyEnabled: boolean;
+  modifyEnable: () => void;
+  modifyReset: () => void;
+  modifySave: () => void;
 };
 
 const props = defineProps<TProps>();
-const { data, loading, primaryLabel } = toRefs(props);
+const { data, loading, labelPrimary } = toRefs(props);
 </script>
 
 <template>
-  <div>Collection: {{ collection }}</div>
-  <div>Primary Label: {{ JSON.stringify(primaryLabel) }}</div>
-  <div>Secondary Label: {{ JSON.stringify(secondaryLabel) }}</div>
   <div v-if="loading">Loading...</div>
   <div v-else>
-    <button @click="onSave">Save</button>
+    <v-button v-if="!isModifyEnabled" @click="modifyEnable">Arrange</v-button>
+    <v-button v-if="isModifyEnabled" @click="modifySave">Save</v-button>
+    <v-button v-if="isModifyEnabled" @click="modifyReset">Reset</v-button>
     <TreeItem
       :items="data"
-      :primaryLabel="primaryLabel"
-      :secondaryLabel="secondaryLabel"
+      :labelPrimary="labelPrimary"
+      :labelSecondary="labelSecondary"
       :collection="collection"
+      :isModifyEnabled="isModifyEnabled"
     />
   </div>
 </template>

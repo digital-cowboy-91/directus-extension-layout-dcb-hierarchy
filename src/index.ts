@@ -43,12 +43,10 @@ export default defineLayout({
     });
 
     const data = ref<TItem[]>([]);
+    const isModifyEnabled = ref(false);
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
-    watch(layoutOptions, () => {
-      console.log(layoutOptions.value);
-    });
-    const { primaryLabel, secondaryLabel } = useLayoutOptions();
+    const { labelPrimary, labelSecondary } = useLayoutOptions();
 
     initialize();
 
@@ -57,20 +55,23 @@ export default defineLayout({
       data,
       loading,
       error,
-      onSave,
-      primaryLabel,
-      secondaryLabel,
+      labelPrimary,
+      labelSecondary,
+      isModifyEnabled,
+      modifyEnable,
+      modifyReset,
+      modifySave,
     };
 
     function initialize() {
-      createRequiredFields();
+      fieldsCreateRequired();
 
       watch(items, () => {
-        data.value = structureData(items.value as TItem[]);
+        data.value = dataStructure(items.value as TItem[]);
       });
     }
 
-    async function createRequiredFields() {
+    async function fieldsCreateRequired() {
       const required = [
         {
           field: "_parent_id",
@@ -100,35 +101,34 @@ export default defineLayout({
           }
         } catch (err) {
           error.value = err;
-          console.error("createRequiredFields: " + field, err);
+          console.error("fieldsCreateRequired: " + field, err);
         }
       }
     }
 
-    function structureData(data: TItem[]) {
-      const newData = data.reduce((acc, item, _index, arr) => {
-        if (!item._children || !item._children.length) {
-          item._children = [];
-        }
+    function dataStructure(data: TItem[]) {
+      const dataWithChildren = data.map((item) => ({ ...item, _children: [] }));
 
-        if (!item._parent_id) {
-          acc.push(item);
-        } else {
-          const parent = arr.find((i) => i.id === item._parent_id);
+      return dataWithChildren.reduce(
+        (acc: TItem[], item: TItem, _index: number, arr: TItem[]) => {
+          if (!item._parent_id) {
+            acc.push(item);
+          } else {
+            const parent = arr.find((i) => i.id === item._parent_id);
 
-          if (parent) {
-            parent._children = parent._children || [];
-            parent._children.push(item);
+            if (parent) {
+              parent._children = parent._children || [];
+              parent._children.push(item);
+            }
           }
-        }
 
-        return acc;
-      }, [] as TItem[]);
-
-      return newData;
+          return acc;
+        },
+        []
+      );
     }
 
-    function destructureData(data: TItem[]) {
+    function dataDestructure(data: TItem[]) {
       const newData: TItem[] = [];
 
       const destructor = (
@@ -155,7 +155,7 @@ export default defineLayout({
       return newData;
     }
 
-    function diffData(original: TItem[], modified: TItem[]) {
+    function dataDiff(original: TItem[], modified: TItem[]) {
       const toBeUpdated: TItem[] = [];
 
       modified.forEach((m) => {
@@ -191,29 +191,29 @@ export default defineLayout({
       }
     }
 
-    async function onSave() {
-      const destructedTree = destructureData(data.value);
-      const toBeUpdated = diffData(items.value as TItem[], destructedTree);
+    async function modifySave() {
+      const destructedTree = dataDestructure(data.value);
+      const toBeUpdated = dataDiff(items.value as TItem[], destructedTree);
 
       updateDbItems(toBeUpdated);
     }
 
     type TLayoutOptions = {
-      primaryLabel: string | null;
-      secondaryLabel: string | null;
+      labelPrimary: string | null;
+      labelSecondary: string | null;
     };
 
     function useLayoutOptions() {
-      const primaryLabel = createViewOption<string | null>(
-        "primaryLabel",
+      const labelPrimary = createViewOption<string | null>(
+        "labelPrimary",
         null
       );
-      const secondaryLabel = createViewOption<string | null>(
-        "secondaryLabel",
+      const labelSecondary = createViewOption<string | null>(
+        "labelSecondary",
         null
       );
 
-      return { primaryLabel, secondaryLabel };
+      return { labelPrimary, labelSecondary };
 
       function createViewOption<T>(
         key: keyof TLayoutOptions,
@@ -235,6 +235,15 @@ export default defineLayout({
           },
         });
       }
+    }
+
+    function modifyEnable() {
+      isModifyEnabled.value = true;
+    }
+
+    function modifyReset() {
+      isModifyEnabled.value = false;
+      data.value = dataStructure(items.value as TItem[]);
     }
   },
 });
