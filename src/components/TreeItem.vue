@@ -1,24 +1,21 @@
 <script setup lang="ts">
-import { Item } from "@directus/types";
 import { toRefs } from "vue";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
+import { TItem } from "..";
 
 type TProps = {
-  items: Item[];
-  labelPrimary?: string;
-  labelSecondary?: string;
-  labelRight?: string;
   collection: string;
   isModifyEnabled: boolean;
+  items: TItem[] | undefined;
+  labelPrimary?: string;
+  labelRight?: string;
+  labelSecondary?: string;
   navigateToItem: (collection: string, itemId: string) => void;
+  toggleBranch: (item: TItem) => void;
 };
 
 const props = defineProps<TProps>();
 const { items, labelPrimary } = toRefs(props);
-
-function toggleBranch(item: Item) {
-  item._expand_view = !item._expand_view;
-}
 </script>
 
 <template>
@@ -76,17 +73,10 @@ function toggleBranch(item: Item) {
           :template="labelRight"
         />
       </v-list-item>
-
       <TreeItem
-        :items="item._children"
+        v-bind="{ ...props, items: item._children }"
         class="tree-view__branch"
         :class="{ 'tree-view__drag-area': isModifyEnabled }"
-        :labelPrimary="labelPrimary"
-        :labelSecondary="labelSecondary"
-        :labelRight="labelRight"
-        :collection="collection"
-        :navigateToItem="navigateToItem"
-        :isModifyEnabled="isModifyEnabled"
       />
     </div>
   </Draggable>

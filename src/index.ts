@@ -17,6 +17,7 @@ export type TItem = {
   _parent_id: string | null;
   _sort_index: number;
   _children?: TItem[];
+  _expand_view?: boolean;
 };
 
 export default defineLayout({
@@ -67,6 +68,7 @@ export default defineLayout({
       modifyReset,
       modifySave,
       navigateToItem,
+      toggleBranch,
     };
 
     function initialize() {
@@ -263,6 +265,10 @@ export default defineLayout({
 
     function navigateToItem(collection: string, itemId: string) {
       router.push(`/content/${collection}/${itemId}`);
+    }
+
+    function toggleBranch(item: TItem) {
+      item._expand_view = !item._expand_view;
     }
   },
 });

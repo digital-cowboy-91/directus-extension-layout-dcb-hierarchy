@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import { toRefs } from "vue";
 import TreeItem from "./components/TreeItem.vue";
 import { TItem } from "./index";
 
 type TProps = {
   collection: string;
   data: TItem[];
-  loading: boolean;
   error?: any;
+  indentation?: "compact" | "cozy" | "comfortable";
+  isModifyEnabled: boolean;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
-  indentation?: "compact" | "cozy" | "comfortable";
-  isModifyEnabled: boolean;
+  loading: boolean;
   modifyEnable: () => void;
   modifyReset: () => void;
   modifySave: () => void;
   navigateToItem: (collection: string, itemId: string) => void;
+  toggleBranch: (item: TItem) => void;
 };
 
 const props = defineProps<TProps>();
-const { data, loading, labelPrimary } = toRefs(props);
 
 const indentSize = () => {
   switch (props.indentation) {
     case "compact":
-      return "1.5rem";
+      return "1rem";
     case "cozy":
-      return "2.5rem";
+      return "3rem";
     case "comfortable":
-      return "3.5rem";
+      return "5rem";
     default:
-      return "2.5rem";
+      return "3rem";
   }
 };
 </script>
@@ -43,15 +42,11 @@ const indentSize = () => {
     <v-button v-if="isModifyEnabled" @click="modifySave">Save</v-button>
     <v-button v-if="isModifyEnabled" @click="modifyReset">Reset</v-button>
     <TreeItem
+      v-bind="{
+        ...props,
+        items: props.data,
+      }"
       class="tree-view"
-      :items="data"
-      :labelPrimary="labelPrimary"
-      :labelRight="labelRight"
-      :labelSecondary="labelSecondary"
-      :indentation="indentation"
-      :collection="collection"
-      :isModifyEnabled="isModifyEnabled"
-      :navigateToItem="navigateToItem"
       :style="{ '--tree-view--indentation': indentSize() }"
     />
   </div>
