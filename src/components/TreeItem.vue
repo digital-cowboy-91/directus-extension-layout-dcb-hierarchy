@@ -10,6 +10,7 @@ type TProps = {
   labelRight?: string;
   collection: string;
   isModifyEnabled: boolean;
+  navigateToItem: (collection: string, itemId: string) => void;
 };
 
 const props = defineProps<TProps>();
@@ -33,7 +34,10 @@ function toggleBranch(item: Item) {
       class="tree-view__item"
       :data-expanded="item._expand_view"
     >
-      <v-list-item block>
+      <v-list-item
+        block
+        @click="() => !isModifyEnabled && navigateToItem(collection, item.id)"
+      >
         <v-icon
           v-if="isModifyEnabled"
           name="drag_handle"
@@ -46,7 +50,7 @@ function toggleBranch(item: Item) {
           class="tree-view__expand-icon"
           :class="{ disabled: !item._children?.length }"
           left
-          @click="toggleBranch(item)"
+          @click.stop="toggleBranch(item)"
         />
 
         <div>
@@ -72,6 +76,7 @@ function toggleBranch(item: Item) {
           :template="labelRight"
         />
       </v-list-item>
+
       <TreeItem
         :items="item._children"
         class="tree-view__branch"
@@ -80,6 +85,7 @@ function toggleBranch(item: Item) {
         :labelSecondary="labelSecondary"
         :labelRight="labelRight"
         :collection="collection"
+        :navigateToItem="navigateToItem"
         :isModifyEnabled="isModifyEnabled"
       />
     </div>

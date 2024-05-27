@@ -16,6 +16,7 @@ type TProps = {
   modifyEnable: () => void;
   modifyReset: () => void;
   modifySave: () => void;
+  navigateToItem: (collection: string, itemId: string) => void;
 };
 
 const props = defineProps<TProps>();
@@ -50,6 +51,7 @@ const indentSize = () => {
       :indentation="indentation"
       :collection="collection"
       :isModifyEnabled="isModifyEnabled"
+      :navigateToItem="navigateToItem"
       :style="{ '--tree-view--indentation': indentSize() }"
     />
   </div>

@@ -9,6 +9,7 @@ import { updateItem } from "@directus/sdk";
 import { computed, ref, toRefs, watch } from "vue";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
+import { useRouter } from "vue-router";
 
 export type TItem = {
   id: string;
@@ -31,6 +32,7 @@ export default defineLayout({
   setup(props, { emit }) {
     const { collection, filter, search } = toRefs(props);
     const client = useSdk();
+    const router = useRouter();
 
     // fields: ref(["id", "title", "_parent_id", "_sort_index", "_level"]),
     const { items, loading, error } = useItems(collection, {
@@ -64,6 +66,7 @@ export default defineLayout({
       modifyEnable,
       modifyReset,
       modifySave,
+      navigateToItem,
     };
 
     function initialize() {
@@ -256,6 +259,10 @@ export default defineLayout({
     function modifyReset() {
       isModifyEnabled.value = false;
       data.value = dataStructure(items.value as TItem[]);
+    }
+
+    function navigateToItem(collection: string, itemId: string) {
+      router.push(`/content/${collection}/${itemId}`);
     }
   },
 });
