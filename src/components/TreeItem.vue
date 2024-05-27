@@ -7,6 +7,7 @@ type TProps = {
   items: Item[];
   labelPrimary?: string;
   labelSecondary?: string;
+  labelRight?: string;
   collection: string;
   isModifyEnabled: boolean;
 };
@@ -41,25 +42,34 @@ function toggleBranch(item: Item) {
           @click.stop="() => {}"
         />
         <v-icon
-          v-if="item._children?.length > 0"
           name="arrow_right"
           class="tree-view__expand-icon"
+          :class="{ disabled: !item._children?.length }"
           left
           @click="toggleBranch(item)"
         />
-        <render-template
-          v-if="labelPrimary"
-          :collection="collection"
-          :item="item"
-          :template="labelPrimary"
-        />
-        <span v-else>{{ item.id }}</span>
+
+        <div>
+          <render-template
+            v-if="labelPrimary"
+            :collection="collection"
+            :item="item"
+            :template="labelPrimary"
+          />
+          <render-template
+            v-if="labelSecondary"
+            class="tree-view__label-secondary"
+            :collection="collection"
+            :item="item"
+            :template="labelSecondary"
+          />
+        </div>
         <div class="spacer" />
         <render-template
-          v-if="labelSecondary"
+          v-if="labelRight"
           :collection="collection"
           :item="item"
-          :template="labelSecondary"
+          :template="labelRight"
         />
       </v-list-item>
       <TreeItem
@@ -68,40 +78,10 @@ function toggleBranch(item: Item) {
         :class="{ 'tree-view__drag-area': isModifyEnabled }"
         :labelPrimary="labelPrimary"
         :labelSecondary="labelSecondary"
+        :labelRight="labelRight"
         :collection="collection"
         :isModifyEnabled="isModifyEnabled"
       />
     </div>
   </Draggable>
 </template>
-
-<style>
-.tree-view__item {
-  margin-bottom: 0.5rem;
-}
-
-.tree-view__item[data-expanded="true"] .tree-view__expand-icon {
-  transform: rotate(90deg);
-}
-
-.tree-view__item[data-expanded="false"] .tree-view__branch {
-  display: none;
-}
-
-.tree-view__branch {
-  margin-top: 0.5rem;
-  margin-left: 2.5rem;
-}
-
-.tree-view__drag-area {
-  min-height: var(--theme--form--field--input--height);
-  padding: 0.5rem;
-  padding-right: 0;
-  background-color: rgba(255 255 255 / 0.1);
-  border-radius: var(--theme--border-radius);
-}
-
-.tree-view__drag-handle {
-  cursor: grad;
-}
-</style>

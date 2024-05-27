@@ -9,7 +9,9 @@ type TProps = {
   loading: boolean;
   error?: any;
   labelPrimary?: string;
+  labelRight?: string;
   labelSecondary?: string;
+  indentation?: "compact" | "cozy" | "comfortable";
   isModifyEnabled: boolean;
   modifyEnable: () => void;
   modifyReset: () => void;
@@ -18,6 +20,19 @@ type TProps = {
 
 const props = defineProps<TProps>();
 const { data, loading, labelPrimary } = toRefs(props);
+
+const indentSize = () => {
+  switch (props.indentation) {
+    case "compact":
+      return "1.5rem";
+    case "cozy":
+      return "2.5rem";
+    case "comfortable":
+      return "3.5rem";
+    default:
+      return "2.5rem";
+  }
+};
 </script>
 
 <template>
@@ -30,9 +45,12 @@ const { data, loading, labelPrimary } = toRefs(props);
       class="tree-view"
       :items="data"
       :labelPrimary="labelPrimary"
+      :labelRight="labelRight"
       :labelSecondary="labelSecondary"
+      :indentation="indentation"
       :collection="collection"
       :isModifyEnabled="isModifyEnabled"
+      :style="{ '--tree-view--indentation': indentSize() }"
     />
   </div>
 </template>
@@ -40,5 +58,42 @@ const { data, loading, labelPrimary } = toRefs(props);
 <style>
 .tree-view {
   padding: var(--content-padding);
+}
+
+.tree-view__item {
+  margin-bottom: 0.5rem;
+}
+
+.tree-view__expand-icon.disabled {
+  opacity: 0.2;
+}
+
+.tree-view__item[data-expanded="true"] .tree-view__expand-icon:not(.disabled) {
+  transform: rotate(90deg);
+}
+
+.tree-view__item[data-expanded="false"] .tree-view__branch {
+  display: none;
+}
+
+.tree-view__branch {
+  margin-top: 0.5rem;
+  margin-left: var(--tree-view--indentation);
+}
+
+.tree-view__label-secondary {
+  font-size: 0.8rem;
+}
+
+.tree-view__drag-area {
+  min-height: var(--theme--form--field--input--height);
+  padding: 0.5rem;
+  padding-right: 0;
+  background-color: rgba(255 255 255 / 0.1);
+  border-radius: var(--theme--border-radius);
+}
+
+.tree-view__drag-handle {
+  cursor: grab;
 }
 </style>

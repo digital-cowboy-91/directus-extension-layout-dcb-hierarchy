@@ -46,7 +46,8 @@ export default defineLayout({
     const isModifyEnabled = ref(false);
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
-    const { labelPrimary, labelSecondary } = useLayoutOptions();
+    const { labelPrimary, labelRight, labelSecondary, indentation } =
+      useLayoutOptions();
 
     initialize();
 
@@ -57,6 +58,8 @@ export default defineLayout({
       error,
       labelPrimary,
       labelSecondary,
+      labelRight,
+      indentation,
       isModifyEnabled,
       modifyEnable,
       modifyReset,
@@ -204,7 +207,9 @@ export default defineLayout({
 
     type TLayoutOptions = {
       labelPrimary: string | null;
+      labelRight: string | null;
       labelSecondary: string | null;
+      indentation: "compact" | "cozy" | "comfortable";
     };
 
     function useLayoutOptions() {
@@ -216,8 +221,13 @@ export default defineLayout({
         "labelSecondary",
         null
       );
+      const labelRight = createViewOption<string | null>("labelRight", null);
+      const indentation = createViewOption<string | null>(
+        "indentation",
+        "cozy"
+      );
 
-      return { labelPrimary, labelSecondary };
+      return { labelPrimary, labelRight, labelSecondary, indentation };
 
       function createViewOption<T>(
         key: keyof TLayoutOptions,
@@ -230,8 +240,6 @@ export default defineLayout({
               : defaultValue;
           },
           set(newValue: T) {
-            console.log(newValue);
-
             layoutOptions.value = {
               ...layoutOptions.value,
               [key]: newValue,
