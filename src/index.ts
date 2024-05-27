@@ -118,7 +118,7 @@ export default defineLayout({
       const dataWithChildren = data.map((item) => ({
         ...item,
         _children: [],
-        _expand_view: true,
+        _expand_view: false,
       }));
 
       return dataWithChildren.reduce(
@@ -131,6 +131,8 @@ export default defineLayout({
             if (parent) {
               parent._children = parent._children || [];
               parent._children.push(item);
+
+              parent._expand_view = true;
             }
           }
 

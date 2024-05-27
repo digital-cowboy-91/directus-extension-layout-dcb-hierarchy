@@ -29,7 +29,7 @@ const { items, labelPrimary } = toRefs(props);
       v-for="item in items"
       :key="item.id"
       class="tree-view__item"
-      :data-expanded="item._expand_view"
+      :data-expand="item._expand_view"
     >
       <v-list-item
         block
@@ -45,9 +45,11 @@ const { items, labelPrimary } = toRefs(props);
         <v-icon
           name="arrow_right"
           class="tree-view__expand-icon"
-          :class="{ disabled: !item._children?.length }"
+          :class="{ disabled: !item._children?.length && !isModifyEnabled }"
           left
-          @click.stop="toggleBranch(item)"
+          @click.stop="
+            (item._children?.length || isModifyEnabled) && toggleBranch(item)
+          "
         />
 
         <div>

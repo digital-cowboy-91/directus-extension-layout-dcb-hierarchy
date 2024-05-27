@@ -41,6 +41,7 @@ const indentSize = () => {
     <v-button v-if="!isModifyEnabled" @click="modifyEnable">Arrange</v-button>
     <v-button v-if="isModifyEnabled" @click="modifySave">Save</v-button>
     <v-button v-if="isModifyEnabled" @click="modifyReset">Reset</v-button>
+
     <TreeItem
       v-bind="{
         ...props,
@@ -65,11 +66,13 @@ const indentSize = () => {
   opacity: 0.2;
 }
 
-.tree-view__item[data-expanded="true"] .tree-view__expand-icon:not(.disabled) {
+.tree-view__item[data-expand="true"]
+  > li
+  .tree-view__expand-icon:not(.disabled) {
   transform: rotate(90deg);
 }
 
-.tree-view__item[data-expanded="false"] .tree-view__branch {
+.tree-view__item[data-expand="false"] .tree-view__branch {
   display: none;
 }
 
