@@ -107,7 +107,11 @@ export default defineLayout({
     }
 
     function dataStructure(data: TItem[]) {
-      const dataWithChildren = data.map((item) => ({ ...item, _children: [] }));
+      const dataWithChildren = data.map((item) => ({
+        ...item,
+        _children: [],
+        _expand_view: true,
+      }));
 
       return dataWithChildren.reduce(
         (acc: TItem[], item: TItem, _index: number, arr: TItem[]) => {

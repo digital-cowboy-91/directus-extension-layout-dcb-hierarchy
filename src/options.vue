@@ -1,3 +1,4 @@
+<!-- TODO [HIGH]: Variable indentation size -->
 <!-- TODO [MEDIUM]: Max level field -->
 
 <script setup lang="ts">

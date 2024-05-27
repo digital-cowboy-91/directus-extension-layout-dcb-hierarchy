@@ -27,6 +27,7 @@ const { data, loading, labelPrimary } = toRefs(props);
     <v-button v-if="isModifyEnabled" @click="modifySave">Save</v-button>
     <v-button v-if="isModifyEnabled" @click="modifyReset">Reset</v-button>
     <TreeItem
+      class="tree-view"
       :items="data"
       :labelPrimary="labelPrimary"
       :labelSecondary="labelSecondary"
@@ -35,3 +36,9 @@ const { data, loading, labelPrimary } = toRefs(props);
     />
   </div>
 </template>
+
+<style>
+.tree-view {
+  padding: var(--content-padding);
+}
+</style>
