@@ -1,5 +1,5 @@
-// TODO [MEDIUM]: Allow relational fields
 // TODO [MEDIUM]: Apply permissions
+// TODO [MEDIUM]: Error handling
 // TODO [LOW]: Filter, Search
 // TODO [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
 // DAY 2: API GET structure (sitemap)

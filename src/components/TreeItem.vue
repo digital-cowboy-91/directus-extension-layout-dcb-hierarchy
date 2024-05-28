@@ -72,7 +72,7 @@ const { items, labelPrimary } = toRefs(props);
             :template="labelSecondary"
           />
         </div>
-        <div class="spacer" />
+        <div class="tree-view__spacer" />
         <render-template
           v-if="labelRight"
           :collection="collection"

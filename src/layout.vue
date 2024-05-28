@@ -43,20 +43,39 @@ const indentSize = () => {
 
 <template>
   <div v-if="loading">Loading...</div>
-  <div v-else>
-    <v-button v-if="!isModifyEnabled" @click="modifyEnable">{{
-      t("sort")
-    }}</v-button>
-    <v-button
-      v-if="isModifyEnabled"
-      @click="modifySave"
-      :disabled="!isModifyDirty"
-      :loading="isSaving"
-      >{{ t("save") }}</v-button
-    >
-    <v-button v-if="isModifyEnabled" @click="modifyCancel">{{
-      t("cancel")
-    }}</v-button>
+  <div v-else class="tree-view">
+    <div class="tree-view__header">
+      <button
+        @click="modifyEnable"
+        class="tree-item__button"
+        :class="{ active: isModifyEnabled }"
+      >
+        {{ t("sort") }}
+      </button>
+      <!-- <v-button v-if="!isModifyEnabled" @click="modifyEnable" :icon="true">
+        <v-icon name="edit" />
+      </v-button> -->
+      <div class="tree-view__spacer" />
+      <button
+        v-if="isModifyEnabled"
+        @click="modifySave"
+        :disabled="!isModifyDirty || isSaving"
+        class="tree-item__button"
+      >
+        <span v-if="isSaving">
+          <v-progress-circular indeterminate />
+        </span>
+        <span v-else>{{ t("save") }}</span>
+      </button>
+      <button
+        v-if="isModifyEnabled"
+        @click="modifyCancel"
+        :disabled="isSaving"
+        class="tree-item__button"
+      >
+        {{ t("cancel") }}
+      </button>
+    </div>
 
     <TreeItem
       v-bind="{
@@ -71,7 +90,6 @@ const indentSize = () => {
         navigateToItem,
         toggleBranch,
       }"
-      class="tree-view"
       :style="{ '--tree-view--indentation': indentSize() }"
     />
   </div>
@@ -119,5 +137,35 @@ const indentSize = () => {
 
 .tree-view__drag-handle {
   cursor: grab;
+}
+
+.tree-view__header {
+  height: var(--theme--form--field--input--height);
+  display: flex;
+  border-top: 2px solid var(--theme--border-color-subdued);
+  border-bottom: 2px solid var(--theme--border-color-subdued);
+  margin-bottom: var(--content-padding);
+}
+
+.tree-item__button {
+  color: var(--theme--foreground-subdued);
+  height: auto;
+}
+
+.tree-item__button.active {
+  color: var(--theme--primary);
+  cursor: initial;
+}
+
+.tree-item__button:enabled:hover:not(.active) {
+  color: var(--theme--foreground);
+}
+
+.tree-item__button:disabled {
+  color: var(--theme--border-color-subdued);
+}
+
+.tree-view__spacer {
+  flex-grow: 1;
 }
 </style>
