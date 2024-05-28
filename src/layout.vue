@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import TreeItem from "./components/TreeItem.vue";
 import { TItem } from "./index";
+
+const { t } = useI18n();
 
 type TProps = {
   collection: string;
@@ -8,12 +11,15 @@ type TProps = {
   error?: any;
   indentation?: "compact" | "cozy" | "comfortable";
   isModifyEnabled: boolean;
+  isModifyDirty: boolean;
+  isSaving: boolean;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
   loading: boolean;
   modifyEnable: () => void;
-  modifyReset: () => void;
+  modifyDirty: () => void;
+  modifyCancel: () => void;
   modifySave: () => void;
   navigateToItem: (collection: string, itemId: string) => void;
   toggleBranch: (item: TItem) => void;
@@ -38,13 +44,31 @@ const indentSize = () => {
 <template>
   <div v-if="loading">Loading...</div>
   <div v-else>
-    <v-button v-if="!isModifyEnabled" @click="modifyEnable">Arrange</v-button>
-    <v-button v-if="isModifyEnabled" @click="modifySave">Save</v-button>
-    <v-button v-if="isModifyEnabled" @click="modifyReset">Reset</v-button>
+    <v-button v-if="!isModifyEnabled" @click="modifyEnable">{{
+      t("sort")
+    }}</v-button>
+    <v-button
+      v-if="isModifyEnabled"
+      @click="modifySave"
+      :disabled="!isModifyDirty"
+      :loading="isSaving"
+      >{{ t("save") }}</v-button
+    >
+    <v-button v-if="isModifyEnabled" @click="modifyCancel">{{
+      t("cancel")
+    }}</v-button>
 
     <TreeItem
       v-bind="{
-        ...props,
+        collection,
+        labelPrimary,
+        labelRight,
+        labelSecondary,
+        isModifyEnabled,
+        isModifyDirty,
+        navigateToItem,
+        toggleBranch,
+        modifyDirty,
         items: props.data,
       }"
       class="tree-view"

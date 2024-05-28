@@ -6,12 +6,14 @@ import { TItem } from "..";
 type TProps = {
   collection: string;
   isModifyEnabled: boolean;
+  isModifyDirty: boolean;
   items: TItem[] | undefined;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
   navigateToItem: (collection: string, itemId: string) => void;
   toggleBranch: (item: TItem) => void;
+  modifyDirty: () => void;
 };
 
 const props = defineProps<TProps>();
@@ -24,6 +26,7 @@ const { items, labelPrimary } = toRefs(props);
     :list="items"
     :group="{ name: 'pages' }"
     handle=".tree-view__drag-handle"
+    :move="modifyDirty"
   >
     <div
       v-for="item in items"

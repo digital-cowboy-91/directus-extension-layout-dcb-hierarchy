@@ -1,5 +1,13 @@
+// TODO [MEDIUM]: Allow relational fields
+// TODO [MEDIUM]: Apply permissions
+// TODO [LOW]: Filter, Search
+// TODO [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
+// DAY 2: API GET structure (sitemap)
+
 import {
   defineLayout,
+  getFieldsFromTemplate,
+  useCollection,
   useItems,
   useSdk,
   useStores,
@@ -7,9 +15,9 @@ import {
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
 import { computed, ref, toRefs, watch } from "vue";
+import { useRouter } from "vue-router";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
-import { useRouter } from "vue-router";
 
 export type TItem = {
   id: string;
@@ -32,40 +40,49 @@ export default defineLayout({
   },
   setup(props, { emit }) {
     const { collection, filter, search } = toRefs(props);
+
+    const isModifyEnabled = ref(false);
+    const isModifyDirty = ref(false);
+    const isSaving = ref(false);
+
+    const data = ref<TItem[]>([]);
+
+    const layoutOptions = useSync(props, "layoutOptions", emit);
+
     const client = useSdk();
     const router = useRouter();
+    const { primaryKeyField } = useCollection(collection);
 
-    // fields: ref(["id", "title", "_parent_id", "_sort_index", "_level"]),
+    const { labelPrimary, labelRight, labelSecondary, indentation } =
+      useLayoutOptions();
+    const { fields } = useLayoutQuery();
+
     const { items, loading, error } = useItems(collection, {
       sort: ref(["-_level", "_parent_id", "_sort_index"]),
-      fields: ref(["*"]),
+      fields,
       limit: ref(-1),
       filter,
       search,
       page: ref(1),
     });
 
-    const data = ref<TItem[]>([]);
-    const isModifyEnabled = ref(false);
-
-    const layoutOptions = useSync(props, "layoutOptions", emit);
-    const { labelPrimary, labelRight, labelSecondary, indentation } =
-      useLayoutOptions();
-
     initialize();
 
     return {
       collection,
       data,
-      loading,
       error,
-      labelPrimary,
-      labelSecondary,
-      labelRight,
       indentation,
+      isModifyDirty,
       isModifyEnabled,
+      isSaving,
+      labelPrimary,
+      labelRight,
+      labelSecondary,
+      loading,
+      modifyCancel,
+      modifyDirty,
       modifyEnable,
-      modifyReset,
       modifySave,
       navigateToItem,
       toggleBranch,
@@ -206,10 +223,12 @@ export default defineLayout({
     }
 
     async function modifySave() {
+      isSaving.value = true;
       const destructedTree = dataDestructure(data.value);
       const toBeUpdated = dataDiff(items.value as TItem[], destructedTree);
 
-      updateDbItems(toBeUpdated);
+      await updateDbItems(toBeUpdated);
+      router.go();
     }
 
     type TLayoutOptions = {
@@ -256,11 +275,46 @@ export default defineLayout({
       }
     }
 
+    function useLayoutQuery() {
+      const fields = computed<string[]>(() => {
+        if (!primaryKeyField.value) return [];
+
+        const fieldsFromTemplates: string[] = [
+          primaryKeyField.value?.field,
+          "_level",
+          "_parent_id",
+          "_sort_index",
+        ];
+
+        if (labelPrimary.value) {
+          fieldsFromTemplates.push(
+            ...getFieldsFromTemplate(labelPrimary.value)
+          );
+        }
+
+        if (labelSecondary.value) {
+          fieldsFromTemplates.push(
+            ...getFieldsFromTemplate(labelSecondary.value)
+          );
+        }
+
+        if (labelRight.value) {
+          fieldsFromTemplates.push(...getFieldsFromTemplate(labelRight.value));
+        }
+
+        console.log(fieldsFromTemplates);
+
+        return fieldsFromTemplates;
+      });
+
+      return { fields };
+    }
+
     function modifyEnable() {
       isModifyEnabled.value = true;
     }
 
-    function modifyReset() {
+    function modifyCancel() {
       isModifyEnabled.value = false;
       data.value = dataStructure(items.value as TItem[]);
     }
@@ -271,6 +325,10 @@ export default defineLayout({
 
     function toggleBranch(item: TItem) {
       item._expand_view = !item._expand_view;
+    }
+
+    function modifyDirty() {
+      isModifyDirty.value = true;
     }
   },
 });
