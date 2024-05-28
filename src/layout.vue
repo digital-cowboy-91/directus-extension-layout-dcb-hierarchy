@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import TreeItem from "./components/TreeItem.vue";
-import { TItem } from "./index";
+import { TTreeItem } from "./types";
 
 const { t } = useI18n();
 
 type TProps = {
   collection: string;
-  data: TItem[];
+  data: TTreeItem[];
   error?: any;
   indentation?: "compact" | "cozy" | "comfortable";
   isModifyEnabled: boolean;
@@ -21,8 +21,8 @@ type TProps = {
   modifyDirty: () => void;
   modifyCancel: () => void;
   modifySave: () => void;
-  navigateToItem: (collection: string, itemId: string) => void;
-  toggleBranch: (item: TItem) => void;
+  navigateToItem: (collection: string, itemKey: string | number) => void;
+  toggleBranch: (item: TTreeItem) => void;
 };
 
 const props = defineProps<TProps>();
@@ -61,15 +61,15 @@ const indentSize = () => {
     <TreeItem
       v-bind="{
         collection,
+        isModifyDirty,
+        isModifyEnabled,
+        items: props.data,
         labelPrimary,
         labelRight,
         labelSecondary,
-        isModifyEnabled,
-        isModifyDirty,
+        modifyDirty,
         navigateToItem,
         toggleBranch,
-        modifyDirty,
-        items: props.data,
       }"
       class="tree-view"
       :style="{ '--tree-view--indentation': indentSize() }"

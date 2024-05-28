@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { toRefs } from "vue";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
-import { TItem } from "..";
+import { TTreeItem } from "../types";
 
 type TProps = {
   collection: string;
-  isModifyEnabled: boolean;
   isModifyDirty: boolean;
-  items: TItem[] | undefined;
+  isModifyEnabled: boolean;
+  items: TTreeItem[] | undefined;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
-  navigateToItem: (collection: string, itemId: string) => void;
-  toggleBranch: (item: TItem) => void;
   modifyDirty: () => void;
+  navigateToItem: (collection: string, itemKey: string | number) => void;
+  toggleBranch: (item: TTreeItem) => void;
 };
 
 const props = defineProps<TProps>();
@@ -30,13 +30,15 @@ const { items, labelPrimary } = toRefs(props);
   >
     <div
       v-for="item in items"
-      :key="item.id"
+      :key="item._key.value"
       class="tree-view__item"
       :data-expand="item._expand_view"
     >
       <v-list-item
         block
-        @click="() => !isModifyEnabled && navigateToItem(collection, item.id)"
+        @click="
+          () => !isModifyEnabled && navigateToItem(collection, item._key.value)
+        "
       >
         <v-icon
           v-if="isModifyEnabled"

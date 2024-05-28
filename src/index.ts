@@ -18,15 +18,8 @@ import { computed, ref, toRefs, watch } from "vue";
 import { useRouter } from "vue-router";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
-
-export type TItem = {
-  id: string;
-  _level: number;
-  _parent_id: string | null;
-  _sort_index: number;
-  _children?: TItem[];
-  _expand_view?: boolean;
-};
+import { TItemExtended, TTreeItem } from "./types";
+import { Item } from "@directus/types";
 
 export default defineLayout({
   id: "dcb-hierarchy",
@@ -45,7 +38,7 @@ export default defineLayout({
     const isModifyDirty = ref(false);
     const isSaving = ref(false);
 
-    const data = ref<TItem[]>([]);
+    const data = ref<TTreeItem[]>([]);
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
 
@@ -58,7 +51,7 @@ export default defineLayout({
     const { fields } = useLayoutQuery();
 
     const { items, loading, error } = useItems(collection, {
-      sort: ref(["-_level", "_parent_id", "_sort_index"]),
+      sort: ref(["-_level", "_parent_key", "_sort_index"]),
       fields,
       limit: ref(-1),
       filter,
@@ -85,6 +78,7 @@ export default defineLayout({
       modifyEnable,
       modifySave,
       navigateToItem,
+      primaryKeyField,
       toggleBranch,
     };
 
@@ -92,14 +86,14 @@ export default defineLayout({
       fieldsCreateRequired();
 
       watch(items, () => {
-        data.value = dataStructure(items.value as TItem[]);
+        data.value = dataStructure(items.value);
       });
     }
 
     async function fieldsCreateRequired() {
       const required = [
         {
-          field: "_parent_id",
+          field: "_parent_key",
           type: "string",
         },
         {
@@ -131,19 +125,35 @@ export default defineLayout({
       }
     }
 
-    function dataStructure(data: TItem[]) {
-      const dataWithChildren = data.map((item) => ({
+    function dataStructure(data: Item[]) {
+      const primKey = primaryKeyField.value?.field;
+
+      if (!primKey) return [];
+
+      const treeItem: TTreeItem[] = data.map((item) => ({
         ...item,
+        _key: {
+          field: primKey,
+          value: item[primKey],
+        },
+        _level: item._level || 0,
+        _parent_key: item._parent_key || null,
+        _sort_index: item._sort_index || null,
         _children: [],
         _expand_view: false,
       }));
 
-      return dataWithChildren.reduce(
-        (acc: TItem[], item: TItem, _index: number, arr: TItem[]) => {
-          if (!item._parent_id) {
+      return treeItem.reduce(
+        (
+          acc: TTreeItem[],
+          item: TTreeItem,
+          _index: number,
+          arr: TTreeItem[]
+        ) => {
+          if (!item._parent_key) {
             acc.push(item);
           } else {
-            const parent = arr.find((i) => i.id === item._parent_id);
+            const parent = arr.find((i) => i._key.value === item._parent_key);
 
             if (parent) {
               parent._children = parent._children || [];
@@ -159,44 +169,50 @@ export default defineLayout({
       );
     }
 
-    function dataDestructure(data: TItem[]) {
-      const newData: TItem[] = [];
+    function dataDestructure(data: TTreeItem[]) {
+      const newData: TItemExtended[] = [];
 
       const destructor = (
-        list: TItem[],
+        list: TTreeItem[],
         level: number = 0,
-        parentId: string | null = null
+        parentKey: string | number | null = null
       ) => {
         list.forEach((item, index) => {
           newData.push({
-            id: item.id,
+            [item._key.field]: item._key.value,
             _level: level,
-            _parent_id: parentId,
+            _parent_key: parentKey,
             _sort_index: index,
           });
 
           if (item._children?.length) {
-            destructor(item._children, level + 1, item.id);
+            destructor(item._children, level + 1, item._key.value);
           }
         });
       };
 
       destructor(data);
 
+      console.log(newData);
+
       return newData;
     }
 
-    function dataDiff(original: TItem[], modified: TItem[]) {
-      const toBeUpdated: TItem[] = [];
+    function dataDiff(original: Item[], modified: TItemExtended[]) {
+      const toBeUpdated: TItemExtended[] = [];
+
+      const primKey = primaryKeyField.value?.field;
+
+      if (!primKey) return [];
 
       modified.forEach((m) => {
-        const o = original.find((i) => i.id === m.id);
+        const o = original.find((i) => i[primKey] === m[primKey]);
 
-        if (!o) throw new Error(`Item ${m.id} missing in original list`);
+        if (!o) throw new Error(`Item ${m[primKey]} missing in original list`);
 
         if (
           o._level !== m._level ||
-          o._parent_id !== m._parent_id ||
+          o._parent_key !== m._parent_key ||
           o._sort_index !== m._sort_index
         ) {
           toBeUpdated.push(m);
@@ -206,18 +222,25 @@ export default defineLayout({
       return toBeUpdated;
     }
 
-    async function updateDbItems(list: TItem[]) {
-      for (const { id, _level, _parent_id, _sort_index } of list) {
+    async function updateDbItems(list: TItemExtended[]) {
+      const primKey = primaryKeyField.value?.field;
+
+      if (!primKey) throw new Error("Missing primary key");
+
+      for (const item of list) {
+        const { _level, _parent_key, _sort_index } = item;
+        const key = item[primKey];
+
         try {
           await client.request(
-            updateItem(collection.value!, id, {
+            updateItem(collection.value!, key, {
               _level,
-              _parent_id,
+              _parent_key,
               _sort_index,
             })
           );
         } catch (err) {
-          console.error("updateDbItems [" + id + "]", err);
+          console.error("updateDbItems [KEY: " + key + "]", err);
         }
       }
     }
@@ -225,7 +248,7 @@ export default defineLayout({
     async function modifySave() {
       isSaving.value = true;
       const destructedTree = dataDestructure(data.value);
-      const toBeUpdated = dataDiff(items.value as TItem[], destructedTree);
+      const toBeUpdated = dataDiff(items.value, destructedTree);
 
       await updateDbItems(toBeUpdated);
       router.go();
@@ -282,7 +305,7 @@ export default defineLayout({
         const fieldsFromTemplates: string[] = [
           primaryKeyField.value?.field,
           "_level",
-          "_parent_id",
+          "_parent_key",
           "_sort_index",
         ];
 
@@ -316,14 +339,14 @@ export default defineLayout({
 
     function modifyCancel() {
       isModifyEnabled.value = false;
-      data.value = dataStructure(items.value as TItem[]);
+      data.value = dataStructure(items.value);
     }
 
-    function navigateToItem(collection: string, itemId: string) {
-      router.push(`/content/${collection}/${itemId}`);
+    function navigateToItem(collection: string, itemKey: string | number) {
+      router.push(`/content/${collection}/${itemKey}`);
     }
 
-    function toggleBranch(item: TItem) {
+    function toggleBranch(item: TTreeItem) {
       item._expand_view = !item._expand_view;
     }
 
