@@ -1,7 +1,9 @@
-// TODO [MEDIUM]: Apply permissions
-// TODO [MEDIUM]: Error handling
-// TODO [LOW]: Filter, Search
-// TODO [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
+// TODO FEAT [HIGH]: Review creation of required fields - parent_key as relation
+// TODO FEAT [MEDIUM]: Apply permissions
+// TODO FEAT [MEDIUM]: Error handling
+// TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
+// TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
+
 // DAY 2: API GET structure (sitemap)
 
 import {
@@ -172,11 +174,15 @@ export default defineLayout({
     function dataDestructure(data: TTreeItem[]) {
       const newData: TItemExtended[] = [];
 
-      const destructor = (
+      destructor(data);
+
+      return newData;
+
+      function destructor(
         list: TTreeItem[],
         level: number = 0,
         parentKey: string | number | null = null
-      ) => {
+      ) {
         list.forEach((item, index) => {
           newData.push({
             [item._key.field]: item._key.value,
@@ -189,13 +195,7 @@ export default defineLayout({
             destructor(item._children, level + 1, item._key.value);
           }
         });
-      };
-
-      destructor(data);
-
-      console.log(newData);
-
-      return newData;
+      }
     }
 
     function dataDiff(original: Item[], modified: TItemExtended[]) {
@@ -324,8 +324,6 @@ export default defineLayout({
         if (labelRight.value) {
           fieldsFromTemplates.push(...getFieldsFromTemplate(labelRight.value));
         }
-
-        console.log(fieldsFromTemplates);
 
         return fieldsFromTemplates;
       });
