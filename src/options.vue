@@ -3,56 +3,55 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useSync } from "@directus/extensions-sdk";
+import { TLayoutOptions, TOptionIndentation, TOptionLabel } from "./types";
 
 const { t } = useI18n();
 
-const props = defineProps<{
+type TProps = {
   collection: string;
-  labelPrimary?: string;
-  labelRight?: string;
-  labelSecondary?: string;
-  indentation?: "compact" | "cozy" | "comfortable";
-}>();
+} & TLayoutOptions;
+
+const props = defineProps<TProps>();
 
 const emit = defineEmits<{
-  (e: "update:labelPrimary", labelPrimary: string): void;
-  (e: "update:labelSecondary", labelSecondary: string): void;
-  (e: "update:labelRight", labelRight: string): void;
-  (e: "update:indentation", indentation: string): void;
+  (e: "update:labelPrimary", value: TOptionLabel): void;
+  (e: "update:labelSecondary", value: TOptionLabel): void;
+  (e: "update:labelRight", value: TOptionLabel): void;
+  (e: "update:indentation", value: TOptionIndentation): void;
 }>();
 
-const labelPrimaryWritable = useSync(props, "labelPrimary", emit);
-const labelSecondaryWritable = useSync(props, "labelSecondary", emit);
-const labelRightWritable = useSync(props, "labelRight", emit);
-const indentationWritable = useSync(props, "indentation", emit);
+const labelPrimaryRef = useSync(props, "labelPrimary", emit);
+const labelSecondaryRef = useSync(props, "labelSecondary", emit);
+const labelRightRef = useSync(props, "labelRight", emit);
+const indentationRef = useSync(props, "indentation", emit);
 </script>
 
 <template>
   <div class="field">
     <div class="type-label">Primary Label</div>
     <v-collection-field-template
-      v-model="labelPrimaryWritable"
+      v-model="labelPrimaryRef"
       :collection="collection"
     />
   </div>
   <div class="field">
     <div class="type-label">Secondary Label</div>
     <v-collection-field-template
-      v-model="labelSecondaryWritable"
+      v-model="labelSecondaryRef"
       :collection="collection"
     />
   </div>
   <div class="field">
     <div class="type-label">Right Label</div>
     <v-collection-field-template
-      v-model="labelRightWritable"
+      v-model="labelRightRef"
       :collection="collection"
     />
   </div>
   <div class="field">
     <div class="type-label">Indentation</div>
     <v-select
-      v-model="indentationWritable"
+      v-model="indentationRef"
       :items="[
         {
           text: t('layouts.tabular.compact'),

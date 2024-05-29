@@ -1,4 +1,4 @@
-// TODO FEAT [HIGH]: Review creation of required fields - parent_key as relation
+// TODO BUG_ [MEDIUM]: Relational interface to the same collection shows tree-view layout as well, but select function is not implemented
 // TODO FEAT [MEDIUM]: Apply permissions
 // TODO FEAT [MEDIUM]: Error handling
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
@@ -12,16 +12,15 @@ import {
   useCollection,
   useItems,
   useSdk,
-  useStores,
   useSync,
 } from "@directus/extensions-sdk";
-import { updateItem } from "@directus/sdk";
+import { createField, createRelation, updateItem } from "@directus/sdk";
+import { Item } from "@directus/types";
 import { computed, ref, toRefs, watch } from "vue";
 import { useRouter } from "vue-router";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
-import { TItemExtended, TTreeItem } from "./types";
-import { Item } from "@directus/types";
+import { TItemExtended, TLayoutOptions, TTreeItem } from "./types";
 
 export default defineLayout({
   id: "dcb-hierarchy",
@@ -46,14 +45,15 @@ export default defineLayout({
 
     const client = useSdk();
     const router = useRouter();
-    const { primaryKeyField } = useCollection(collection);
+    const { primaryKeyField, fields: collectionFields } =
+      useCollection(collection);
 
     const { labelPrimary, labelRight, labelSecondary, indentation } =
       useLayoutOptions();
-    const { fields } = useLayoutQuery();
+    const { sort, fields } = useLayoutQuery();
 
-    const { items, loading, error } = useItems(collection, {
-      sort: ref(["-_level", "_parent_key", "_sort_index"]),
+    const { items, loading, error, getItems } = useItems(collection, {
+      sort,
       fields,
       limit: ref(-1),
       filter,
@@ -61,7 +61,9 @@ export default defineLayout({
       page: ref(1),
     });
 
-    initialize();
+    watch(items, () => {
+      data.value = dataStructure(items.value);
+    });
 
     return {
       collection,
@@ -84,55 +86,12 @@ export default defineLayout({
       toggleBranch,
     };
 
-    function initialize() {
-      fieldsCreateRequired();
-
-      watch(items, () => {
-        data.value = dataStructure(items.value);
-      });
-    }
-
-    async function fieldsCreateRequired() {
-      const required = [
-        {
-          field: "_parent_key",
-          type: "string",
-        },
-        {
-          field: "_sort_index",
-          type: "integer",
-        },
-        {
-          field: "_level",
-          type: "integer",
-        },
-      ];
-
-      const { useFieldsStore } = useStores();
-      const store = useFieldsStore();
-
-      const collectionKey = collection.value;
-
-      for (const { field, type } of required) {
-        try {
-          const retrieve = await store.getField(collectionKey, field);
-
-          if (!retrieve) {
-            await store.createField(collectionKey, { field, type });
-          }
-        } catch (err) {
-          error.value = err;
-          console.error("fieldsCreateRequired: " + field, err);
-        }
-      }
-    }
-
     function dataStructure(data: Item[]) {
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) return [];
 
-      const treeItem: TTreeItem[] = data.map((item) => ({
+      const treeItems: TTreeItem[] = data.map((item) => ({
         ...item,
         _key: {
           field: primKey,
@@ -145,7 +104,9 @@ export default defineLayout({
         _expand_view: false,
       }));
 
-      return treeItem.reduce(
+      if (sort.value.length === 0) return treeItems;
+
+      return treeItems.reduce(
         (
           acc: TTreeItem[],
           item: TTreeItem,
@@ -245,21 +206,83 @@ export default defineLayout({
       }
     }
 
+    async function fieldsCreateRequired() {
+      const collectionKey = collection.value;
+
+      if (!collectionKey) throw new Error("Missing collection");
+
+      const fields = [
+        {
+          field: "_parent_key",
+          type: primaryKeyField.value?.type,
+          schema: {
+            foreign_key_column: primaryKeyField.value?.field,
+            foreign_key_table: collectionKey,
+          },
+          meta: {
+            hidden: true,
+            interface: "select-dropdown-m2o",
+            readonly: true,
+            special: ["m2o"],
+          },
+        },
+        {
+          field: "_sort_index",
+          type: "integer",
+          meta: {
+            hidden: true,
+            readonly: true,
+          },
+        },
+        {
+          field: "_level",
+          type: "integer",
+          meta: {
+            hidden: true,
+            readonly: true,
+          },
+        },
+      ];
+
+      for (const item of fields) {
+        try {
+          if (fieldExists(item.field)) continue;
+
+          await client.request(createField(collectionKey, item));
+          // await store().createField(collectionKey, item);
+
+          if (item.schema && item.schema.foreign_key_table) {
+            await client.request(
+              createRelation({
+                collection: collectionKey,
+                field: item.field,
+                related_collection: item.schema.foreign_key_table,
+              })
+            );
+          }
+        } catch (err) {
+          console.error("[fieldsCreateRequired] Field" + item.field, err);
+        }
+      }
+    }
+
     async function modifySave() {
       isSaving.value = true;
+
       const destructedTree = dataDestructure(data.value);
       const toBeUpdated = dataDiff(items.value, destructedTree);
 
+      await fieldsCreateRequired();
       await updateDbItems(toBeUpdated);
-      router.go();
-    }
 
-    type TLayoutOptions = {
-      labelPrimary: string | null;
-      labelRight: string | null;
-      labelSecondary: string | null;
-      indentation: "compact" | "cozy" | "comfortable";
-    };
+      isSaving.value = false;
+
+      if (sort.value.length === 0) {
+        router.go();
+      } else {
+        refresh();
+      }
+    }
 
     function useLayoutOptions() {
       const labelPrimary = createViewOption<string | null>(
@@ -299,14 +322,22 @@ export default defineLayout({
     }
 
     function useLayoutQuery() {
+      const sort = computed<string[]>(() => {
+        const sortFields = ["_level", "_sort_index", "_parent_key"];
+
+        for (const item of sortFields) {
+          if (!fieldExists(item)) return [];
+        }
+
+        return sortFields;
+      });
+
       const fields = computed<string[]>(() => {
         if (!primaryKeyField.value) return [];
 
         const fieldsFromTemplates: string[] = [
           primaryKeyField.value?.field,
-          "_level",
-          "_parent_key",
-          "_sort_index",
+          ...sort.value,
         ];
 
         if (labelPrimary.value) {
@@ -328,7 +359,7 @@ export default defineLayout({
         return fieldsFromTemplates;
       });
 
-      return { fields };
+      return { sort, fields };
     }
 
     function modifyEnable() {
@@ -336,8 +367,7 @@ export default defineLayout({
     }
 
     function modifyCancel() {
-      isModifyEnabled.value = false;
-      data.value = dataStructure(items.value);
+      refresh();
     }
 
     function navigateToItem(collection: string, itemKey: string | number) {
@@ -350,6 +380,20 @@ export default defineLayout({
 
     function modifyDirty() {
       isModifyDirty.value = true;
+    }
+
+    function refresh() {
+      isSaving.value = false;
+      isModifyDirty.value = false;
+      isModifyEnabled.value = false;
+
+      getItems();
+    }
+
+    function fieldExists(field: string) {
+      return (
+        collectionFields.value.findIndex((item) => item.field === field) !== -1
+      );
     }
   },
 });
