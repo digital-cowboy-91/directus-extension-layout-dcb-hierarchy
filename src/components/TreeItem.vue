@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRefs } from "vue";
+import type { ShowSelect } from "@directus/extensions";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { TTreeItem } from "../types";
 
@@ -14,10 +14,34 @@ type TProps = {
   modifyDirty: () => void;
   navigateToItem: (collection: string, itemKey: string | number) => void;
   toggleBranch: (item: TTreeItem) => void;
+  showSelect?: ShowSelect;
+  selection: (number | string)[];
+  selectMode: boolean;
 };
 
-const props = defineProps<TProps>();
-const { items, labelPrimary } = toRefs(props);
+const { selection, showSelect } = defineProps<TProps>();
+
+defineEmits(["item-selected"]);
+
+function handleSelection(key: string | number) {
+  const index = selection.indexOf(key);
+
+  if (showSelect === "one") {
+    console.log("HIT");
+
+    selection.splice(0, selection.length, key);
+
+    console.log(selection);
+
+    return;
+  }
+
+  if (index > -1) {
+    selection.splice(index, 1);
+  } else {
+    selection.push(key);
+  }
+}
 </script>
 
 <template>
@@ -37,7 +61,10 @@ const { items, labelPrimary } = toRefs(props);
       <v-list-item
         block
         @click="
-          () => !isModifyEnabled && navigateToItem(collection, item._key.value)
+          () =>
+            !isModifyEnabled &&
+            !selectMode &&
+            navigateToItem(collection, item._key.value)
         "
       >
         <v-icon
@@ -79,9 +106,18 @@ const { items, labelPrimary } = toRefs(props);
           :item="item"
           :template="labelRight"
         />
+        <v-checkbox
+          :icon-on="showSelect === 'one' ? 'radio_button_checked' : undefined"
+          :icon-off="
+            showSelect === 'one' ? 'radio_button_unchecked' : undefined
+          "
+          :model-value="selection.includes(item._key.value)"
+          @update:model-value="handleSelection(item._key.value)"
+          :disabled="isModifyEnabled"
+        />
       </v-list-item>
       <TreeItem
-        v-bind="{ ...props, items: item._children }"
+        v-bind="{ ...$props, items: item._children }"
         class="tree-view__branch"
         :class="{ 'tree-view__drag-area': isModifyEnabled }"
       />

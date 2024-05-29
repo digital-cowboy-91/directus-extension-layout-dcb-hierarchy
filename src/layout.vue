@@ -2,12 +2,16 @@
 import { useI18n } from "vue-i18n";
 import TreeItem from "./components/TreeItem.vue";
 import { TTreeItem } from "./types";
+import type { ShowSelect } from "@directus/extensions";
+import { computed } from "vue";
 
 const { t } = useI18n();
 
 type TProps = {
   collection: string;
   data: TTreeItem[];
+  dataLength: number;
+  dataKeys: string[] | number[];
   error?: any;
   indentation?: "compact" | "cozy" | "comfortable";
   isModifyEnabled: boolean;
@@ -23,6 +27,10 @@ type TProps = {
   modifySave: () => void;
   navigateToItem: (collection: string, itemKey: string | number) => void;
   toggleBranch: (item: TTreeItem) => void;
+  selectAll: () => void;
+  showSelect?: ShowSelect;
+  selection: (number | string)[];
+  selectMode: boolean;
 };
 
 const props = defineProps<TProps>();
@@ -39,12 +47,38 @@ const indentSize = () => {
       return "3rem";
   }
 };
+
+const emit = defineEmits(["item-selected"]);
+
+const allItemsSelected = computed<boolean>(
+  () => props.dataLength > 0 && props.selection.length === props.dataLength
+);
+
+const someItemsSelected = computed<boolean>(
+  () => props.selection.length > 0 && props.selection.length < props.dataLength
+);
+
+function onToggleSelectAll(value: boolean) {
+  if (value === true) {
+    props.selection.splice(0, props.selection.length, ...props.dataKeys);
+  } else {
+    props.selection.splice(0, props.selection.length, ...[]);
+  }
+}
 </script>
 
 <template>
+  <div>
+    <ul>
+      <li>DEBUG</li>
+      <li>[showSelect]: {{ showSelect }}</li>
+      <li>[selection]: {{ selection }}</li>
+      <li>[selectMode]: {{ selectMode }}</li>
+    </ul>
+  </div>
   <div v-if="loading">Loading...</div>
   <div v-else class="tree-view">
-    <div class="tree-view__header">
+    <div v-if="!selectMode" class="tree-view__header">
       <button
         @click="modifyEnable"
         class="tree-item__button"
@@ -75,6 +109,13 @@ const indentSize = () => {
       >
         {{ t("cancel") }}
       </button>
+      <v-checkbox
+        v-if="showSelect === 'multiple'"
+        :model-value="allItemsSelected"
+        :indeterminate="someItemsSelected"
+        @update:model-value="onToggleSelectAll"
+        :disabled="isModifyEnabled"
+      />
     </div>
 
     <TreeItem
@@ -89,6 +130,9 @@ const indentSize = () => {
         modifyDirty,
         navigateToItem,
         toggleBranch,
+        selection,
+        selectMode,
+        showSelect,
       }"
       :style="{ '--tree-view--indentation': indentSize() }"
     />
@@ -102,6 +146,10 @@ const indentSize = () => {
 
 .tree-view__item {
   margin-bottom: 0.5rem;
+}
+
+.tree-view__item > li:hover {
+  background-color: var(--theme--background-subdued);
 }
 
 .tree-view__expand-icon.disabled {
@@ -145,6 +193,7 @@ const indentSize = () => {
   border-top: 2px solid var(--theme--border-color-subdued);
   border-bottom: 2px solid var(--theme--border-color-subdued);
   margin-bottom: var(--content-padding);
+  padding-right: var(--theme--form--field--input--padding);
 }
 
 .tree-item__button {
@@ -162,7 +211,7 @@ const indentSize = () => {
 }
 
 .tree-item__button:disabled {
-  color: var(--theme--border-color-subdued);
+  color: var(--theme--foreground-subdued);
 }
 
 .tree-view__spacer {

@@ -39,9 +39,8 @@ export default defineLayout({
     const isModifyDirty = ref(false);
     const isSaving = ref(false);
 
-    const data = ref<TTreeItem[]>([]);
-
     const layoutOptions = useSync(props, "layoutOptions", emit);
+    const selection = useSync(props, "selection", emit);
 
     const client = useSdk();
     const router = useRouter();
@@ -61,6 +60,19 @@ export default defineLayout({
       page: ref(1),
     });
 
+    const data = ref<TTreeItem[]>([]);
+    // const data = computed(() =>
+    //   items.value ? dataStructure(items.value) : []
+    // );
+    const dataLength = computed(() => items.value.length || 0);
+    const dataKeys = computed(() =>
+      items.value.map((i) => {
+        if (!primaryKeyField.value) return null;
+
+        return i[primaryKeyField.value?.field];
+      })
+    );
+
     watch(items, () => {
       data.value = dataStructure(items.value);
     });
@@ -68,6 +80,8 @@ export default defineLayout({
     return {
       collection,
       data,
+      dataLength,
+      dataKeys,
       error,
       indentation,
       isModifyDirty,
@@ -394,6 +408,10 @@ export default defineLayout({
       return (
         collectionFields.value.findIndex((item) => item.field === field) !== -1
       );
+    }
+
+    function selectReset() {
+      selection.value = [];
     }
   },
 });
