@@ -98,6 +98,7 @@ export default defineLayout({
       navigateToItem,
       primaryKeyField,
       toggleBranch,
+      refresh,
     };
 
     function dataStructure(data: Item[]) {
