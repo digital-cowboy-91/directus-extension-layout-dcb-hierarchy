@@ -1,6 +1,7 @@
 // TODO BUG_ [MEDIUM]: Relational interface to the same collection shows tree-view layout as well, but select function is not implemented
 // TODO FEAT [MEDIUM]: Apply permissions
 // TODO FEAT [MEDIUM]: Error handling
+// TODO FEAT [MEDIUM]: Add generate path option from slug
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
 
@@ -17,7 +18,7 @@ import {
   useSync,
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
-import { Field } from "@directus/types";
+import { Field, Relation, DeepPartial } from "@directus/types";
 import { ComputedRef, computed, ref, toRefs, watch } from "vue";
 import TreeView from "./TreeView.vue";
 import Options from "./Options.vue";
@@ -46,7 +47,9 @@ export default defineLayout({
     const { primaryKeyField, fields: fieldsInCollection } =
       useCollection(collection);
 
-    const fieldsStore = useStores().useFieldsStore();
+    const { useFieldsStore, useRelationsStore } = useStores();
+    const relationsStore = useRelationsStore();
+    const fieldsStore = useFieldsStore();
 
     const {
       missingMandatory,
@@ -100,30 +103,33 @@ export default defineLayout({
 
     return {
       collection,
-      data,
-      dataLength,
-      dataKeys,
-      error,
-      indentation,
-      isModifyDirty,
-      isModifyEnabled,
-      isSaving,
-      labelPrimary,
-      labelRight,
-      labelSecondary,
-      loading,
-      modifyCancel,
-      modifyDirty,
-      modifyEnable,
-      modifySave,
       primaryKeyField,
       sort,
       fieldsInCollection,
+
+      data,
+      dataLength,
+      dataKeys,
+      loading,
+      error,
 
       missingMandatory,
       hasMandatory,
       createMandatory,
       removeMandatory,
+
+      indentation,
+      labelPrimary,
+      labelRight,
+      labelSecondary,
+
+      isModifyDirty,
+      isModifyEnabled,
+      isSaving,
+      modifyCancel,
+      modifyDirty,
+      modifyEnable,
+      modifySave,
 
       refresh,
     };
@@ -323,13 +329,23 @@ export default defineLayout({
         removeMandatory,
       };
 
-      function createMandatory() {
+      async function createMandatory() {
         const collectionKey = collection.value;
 
         if (!collectionKey) throw new Error("Missing collection");
 
         for (const item of missingMandatory.value) {
-          fieldsStore.createField(item.collection, item);
+          const { collection, field, schema } = item;
+
+          fieldsStore.createField(collection, item).then(() => {
+            if (!schema?.foreign_key_table) return;
+
+            relationsStore.upsertRelation(collection, field, {
+              collection,
+              field,
+              related_collection: schema.foreign_key_table,
+            } as DeepPartial<Relation>);
+          });
         }
       }
 
