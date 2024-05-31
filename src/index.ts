@@ -18,15 +18,15 @@ import {
   useSync,
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
-import { Field, Relation, DeepPartial } from "@directus/types";
+import { DeepPartial, Field, Relation } from "@directus/types";
 import { ComputedRef, computed, ref, toRefs, watch } from "vue";
-import TreeView from "./TreeView.vue";
 import Options from "./Options.vue";
+import TreeView from "./TreeView.vue";
 import { TItem, TItemVirtual, TLayoutOptions } from "./types";
 import {
-  dataStructure,
   dataDestructure,
   dataDiff,
+  dataStructure,
 } from "./utils/dataProcessor";
 
 export default defineLayout({
@@ -40,7 +40,7 @@ export default defineLayout({
     actions: () => null,
   },
   setup(props, { emit }) {
-    const { collection, filter, search, selection } = toRefs(props);
+    const { collection, filter, search, selection, showSelect } = toRefs(props);
 
     const isModifyEnabled = ref<boolean>(false);
     const isModifyDirty = ref<boolean>(false);
@@ -148,6 +148,7 @@ export default defineLayout({
 
       saveModifications,
       selectAll,
+      selectOne,
 
       refresh,
     };
@@ -386,6 +387,18 @@ export default defineLayout({
       } else {
         selection.value.splice(0, selection.value.length);
       }
+    }
+
+    function selectOne(key: string | number) {
+      console.log("selectOne", key);
+      const index = selection.value.indexOf(key);
+
+      if (showSelect.value === "one") {
+        selection.value.splice(0, selection.value.length, key);
+        return;
+      }
+
+      if (index === -1) selection.value.push(key);
     }
   },
 });

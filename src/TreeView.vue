@@ -9,6 +9,8 @@ import ViewHeader from "./components/ViewHeader.vue";
 import { TItemVirtual } from "./types";
 
 type TProps = {
+  collection: string;
+
   data: TItemVirtual[];
   error?: any;
   loading: boolean;
@@ -34,12 +36,14 @@ type TProps = {
 
   saveModifications: () => Promise<void>;
   selectAll: () => void;
+  selectOne: (key: string | number) => void;
 
   refresh: () => void;
 };
 
 const props = defineProps<TProps>();
 const {
+  data,
   isModifyDirty,
   isModifyEnabled,
   isSaving,
@@ -53,7 +57,7 @@ const {
   <div v-if="hasMandatory" class="tree-view">
     <ViewHeader
       v-if="!selectMode"
-      :is-enabled="isModifyEnabled"
+      :modify-mode="isModifyEnabled"
       :is-dirty="isModifyDirty"
       :is-saving="isSaving"
       :selected="selectedKeysCount"
@@ -63,16 +67,16 @@ const {
       @select-all="selectAll"
     />
     <TreeItem
+      @dirty="isModifyDirty = true"
+      @select-one="selectOne"
       v-bind="{
         collection,
-        isModifyDirty,
-        isModifyEnabled,
-        items: props.data,
+        items: data,
+        modifyMode: isModifyEnabled,
         labelPrimary,
         labelRight,
         labelSecondary,
-        modifyDirty,
-        toggleBranch,
+
         selection,
         selectMode,
         showSelect,

@@ -5,7 +5,7 @@ const { t } = useI18n();
 
 type TProps = {
   selected: number;
-  isEnabled: boolean;
+  modifyMode: boolean;
   isDirty: boolean;
   isSaving: boolean;
 };
@@ -19,13 +19,13 @@ const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
     <button
       @click="emit('enable')"
       class="tree-item__button"
-      :class="{ active: isEnabled }"
+      :class="{ active: modifyMode }"
     >
       {{ t("sort") }}
     </button>
     <div class="tree-view__spacer" />
     <button
-      v-if="isEnabled"
+      v-if="modifyMode"
       @click="emit('save')"
       :disabled="!isDirty || isSaving"
       class="tree-item__button"
@@ -36,7 +36,7 @@ const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
       <span v-else>{{ t("save") }}</span>
     </button>
     <button
-      v-if="isEnabled"
+      v-if="modifyMode"
       @click="emit('cancel')"
       :disabled="isSaving"
       class="tree-item__button"
@@ -44,7 +44,7 @@ const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
       {{ t("cancel") }}
     </button>
     <VCheckbox
-      v-if="!isEnabled"
+      v-if="!modifyMode"
       :model-value="selected === -1"
       :indeterminate="selected > 0"
       @click="emit('select-all')"

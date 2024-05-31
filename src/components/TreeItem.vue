@@ -1,53 +1,47 @@
 <script setup lang="ts">
 import type { ShowSelect } from "@directus/extensions";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
-import { TItemVirtual } from "../types";
 import { useRouter } from "vue-router";
+import { TItemVirtual } from "../types";
+import { computed, toRefs } from "vue";
 
 type TProps = {
   collection: string;
-  isModifyDirty: boolean;
-  isModifyEnabled: boolean;
-  items: TItemVirtual[] | undefined;
+  items: TItemVirtual[];
+  modifyMode: boolean;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
-  modifyDirty: () => void;
+
   showSelect?: ShowSelect;
   selection: (number | string)[];
   selectMode: boolean;
 };
 
-const { selection, showSelect } = defineProps<TProps>();
+const props = defineProps<TProps>();
+const { selection, showSelect, collection, modifyMode, selectMode } =
+  toRefs(props);
+const emit = defineEmits(["dirty", "select-one"]);
 const router = useRouter();
 
-function handleSelection(key: string | number) {
-  const index = selection.indexOf(key);
-
-  if (showSelect === "one") {
-    selection.splice(0, selection.length, key);
-    return;
-  }
-
-  if (index > -1) {
-    selection.splice(index, 1);
-  } else {
-    selection.push(key);
-  }
-}
+const notInMode = computed(() => !modifyMode.value && !selectMode.value);
 
 function toggleBranch(item: TItemVirtual) {
   item._expand_view = !item._expand_view;
+}
+
+function navigateTo(itemKey: string | number) {
+  router.push(`/content/${collection.value}/${itemKey}`);
 }
 </script>
 
 <template>
   <Draggable
-    :disabled="!isModifyEnabled"
+    :disabled="!modifyMode"
     :list="items"
     :group="{ name: 'pages' }"
     handle=".tree-view__drag-handle"
-    :move="modifyDirty"
+    :move="() => emit('dirty')"
   >
     <div
       v-for="item in items"
@@ -57,16 +51,11 @@ function toggleBranch(item: TItemVirtual) {
     >
       <VListItem
         block
-        :clickable="!isModifyEnabled && !selectMode"
-        @click="
-          () =>
-            !isModifyEnabled &&
-            !selectMode &&
-            router.push(`/content/${collection}/${item._key.value}`)
-        "
+        :clickable="notInMode"
+        @click="() => notInMode && navigateTo(item._key.value)"
       >
         <VIcon
-          v-if="isModifyEnabled"
+          v-if="modifyMode"
           name="drag_handle"
           class="tree-view__drag-handle"
           left
@@ -75,7 +64,7 @@ function toggleBranch(item: TItemVirtual) {
         <button
           class="tree-view__button-expand"
           @click.stop="toggleBranch(item)"
-          :disabled="!item._children?.length && !isModifyEnabled"
+          :disabled="!item._children?.length && !modifyMode"
         >
           <v-icon name="chevron_right" />
         </button>
@@ -102,19 +91,21 @@ function toggleBranch(item: TItemVirtual) {
           :template="labelRight"
         />
         <VCheckbox
-          v-if="!isModifyEnabled"
+          v-if="!modifyMode"
           :icon-on="showSelect === 'one' ? 'radio_button_checked' : undefined"
           :icon-off="
             showSelect === 'one' ? 'radio_button_unchecked' : undefined
           "
           :model-value="selection.includes(item._key.value)"
-          @update:model-value="handleSelection(item._key.value)"
+          @update:model-value="() => emit('select-one', item._key.value)"
         />
       </VListItem>
       <TreeItem
         v-bind="{ ...$props, items: item._children }"
+        @dirty="emit('dirty')"
+        @select-one="emit('select-one', $event)"
         class="tree-view__branch"
-        :class="{ 'tree-view__drag-area': isModifyEnabled }"
+        :class="{ 'tree-view__drag-area': modifyMode }"
       />
     </div>
   </Draggable>
