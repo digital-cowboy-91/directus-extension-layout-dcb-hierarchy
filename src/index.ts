@@ -134,7 +134,7 @@ export default defineLayout({
       refresh,
     };
 
-    async function updateDbItems(list: TItem[]) {
+    async function itemsUpdateCollection(list: TItem[]) {
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) throw new Error("Missing primary key");
@@ -152,7 +152,7 @@ export default defineLayout({
             })
           );
         } catch (err) {
-          console.error("updateDbItems [KEY: " + key + "]", err);
+          console.error("itemsUpdateCollection [KEY: " + key + "]", err);
         }
       }
     }
@@ -171,7 +171,7 @@ export default defineLayout({
         destructedTree
       );
 
-      await updateDbItems(toBeUpdated);
+      await itemsUpdateCollection(toBeUpdated);
 
       isSaving.value = false;
 
