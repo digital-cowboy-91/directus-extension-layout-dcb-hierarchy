@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
 type TProps = {
-  selected: boolean | undefined;
+  selected: number;
   isEnabled: boolean;
   isDirty: boolean;
   isSaving: boolean;
@@ -44,8 +44,9 @@ const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
       {{ t("cancel") }}
     </button>
     <VCheckbox
-      :model-value="selected === true"
-      :indeterminate="selected === undefined"
+      v-if="!isEnabled"
+      :model-value="selected === -1"
+      :indeterminate="selected > 0"
       @click="emit('select-all')"
     />
   </div>

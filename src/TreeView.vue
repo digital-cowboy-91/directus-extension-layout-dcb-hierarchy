@@ -1,98 +1,52 @@
 <script setup lang="ts">
 import type { ShowSelect } from "@directus/extensions";
 
+import { Ref, toRefs } from "vue";
+import DebugTable from "./components/DebugTable.vue";
+import MandatoryCard from "./components/MandatoryCard.vue";
 import TreeItem from "./components/TreeItem.vue";
 import ViewHeader from "./components/ViewHeader.vue";
-import MandatoryCard from "./components/MandatoryCard.vue";
-import DebugTable from "./components/DebugTable.vue";
 import { TItemVirtual } from "./types";
-import { computed, ref } from "vue";
-import { refresh } from "@directus/sdk";
 
 type TProps = {
   data: TItemVirtual[];
-  dataLength: number;
-  dataKeys: string[] | number[];
   error?: any;
   loading: boolean;
 
   labelPrimary?: string;
-  labelRight?: string;
   labelSecondary?: string;
-  indentation?: "compact" | "cozy" | "comfortable";
-
-  showSelect?: ShowSelect;
-  selection: (number | string)[];
-  selectMode: boolean;
-
-  collection: string;
-  primaryKeyField: any;
-  fieldsInCollection: any[];
+  labelRight?: string;
+  indentSize: string;
 
   missingMandatory: any[];
   hasMandatory: boolean;
   createMandatory: () => void;
   removeMandatory: () => void;
 
+  isModifyDirty: Ref<boolean>;
+  isModifyEnabled: Ref<boolean>;
+  isSaving: Ref<boolean>;
+
+  selectedKeysCount: number;
+  showSelect?: ShowSelect;
+  selection: (number | string)[];
+  selectMode: boolean;
+
   saveModifications: () => Promise<void>;
+  selectAll: () => void;
 
   refresh: () => void;
 };
 
 const props = defineProps<TProps>();
-
-const indentSize = () => {
-  switch (props.indentation) {
-    case "compact":
-      return "1rem";
-    case "cozy":
-      return "3rem";
-    case "comfortable":
-      return "5rem";
-    default:
-      return "3rem";
-  }
-};
-
-const isModifyEnabled = ref<boolean>(false);
-const isModifyDirty = ref<boolean>(false);
-const isSaving = ref<boolean>(false);
-
-const selected = computed(() => {
-  if (props.dataLength > 0 && props.selection.length === props.dataLength)
-    return true;
-  if (props.selection.length > 0 && props.selection.length < props.dataLength)
-    return undefined;
-  return false;
-});
-
-function onModifyEnable() {
-  isModifyEnabled.value = true;
-}
-async function onModifySave() {
-  isSaving.value = true;
-  await props.saveModifications();
-  isSaving.value = false;
-
-  refreshAndReset();
-}
-function modifyCancel() {
-  refreshAndReset();
-}
-
-function refreshAndReset() {
-  refresh();
-  isModifyEnabled.value = false;
-  isModifyDirty.value = false;
-}
-
-function onSelectAll() {
-  if (!selected.value) {
-    props.selection.splice(0, props.selection.length, ...props.dataKeys);
-  } else {
-    props.selection.splice(0, props.selection.length, ...[]);
-  }
-}
+const {
+  isModifyDirty,
+  isModifyEnabled,
+  isSaving,
+  saveModifications,
+  refresh,
+  selectedKeysCount,
+} = toRefs(props);
 </script>
 
 <template>
@@ -102,11 +56,11 @@ function onSelectAll() {
       :is-enabled="isModifyEnabled"
       :is-dirty="isModifyDirty"
       :is-saving="isSaving"
-      :selected="selected"
-      @enable="onModifyEnable"
-      @save="onModifySave"
-      @cancel="modifyCancel"
-      @select-all="onSelectAll"
+      :selected="selectedKeysCount"
+      @enable="isModifyEnabled = true"
+      @save="saveModifications"
+      @cancel="refresh"
+      @select-all="selectAll"
     />
     <TreeItem
       v-bind="{
@@ -123,7 +77,7 @@ function onSelectAll() {
         selectMode,
         showSelect,
       }"
-      :style="{ '--tree-view--indentation': indentSize() }"
+      :style="{ '--tree-view--indentation': indentSize }"
     />
   </div>
   <div v-else>

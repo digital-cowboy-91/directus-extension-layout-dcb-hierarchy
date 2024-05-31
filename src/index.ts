@@ -40,7 +40,11 @@ export default defineLayout({
     actions: () => null,
   },
   setup(props, { emit }) {
-    const { collection, filter, search } = toRefs(props);
+    const { collection, filter, search, selection } = toRefs(props);
+
+    const isModifyEnabled = ref<boolean>(false);
+    const isModifyDirty = ref<boolean>(false);
+    const isSaving = ref<boolean>(false);
 
     const client = useSdk();
 
@@ -65,20 +69,17 @@ export default defineLayout({
       useLayoutOptions();
 
     const { sort, fields, limit, page } = useItemsQuery();
-    const {
-      items,
-      loading,
-      error,
-      itemCount: dataLength,
-      getItems,
-    } = useItems(collection, {
-      sort,
-      fields,
-      limit,
-      filter,
-      search,
-      page,
-    });
+    const { items, loading, error, itemCount, getItems } = useItems(
+      collection,
+      {
+        sort,
+        fields,
+        limit,
+        filter,
+        search,
+        page,
+      }
+    );
 
     const data = ref<TItemVirtual[]>([]);
     const dataKeys = computed(() =>
@@ -88,6 +89,7 @@ export default defineLayout({
         return i[primaryKeyField.value?.field];
       })
     );
+    const dataLength = computed(() => itemCount.value || 0);
 
     watch(items, () => {
       const primKey = primaryKeyField.value?.field;
@@ -97,6 +99,27 @@ export default defineLayout({
       data.value = dataStructure(primKey, items.value as TItem[]);
     });
 
+    const indentSize = computed(() => {
+      switch (indentation.value) {
+        case "compact":
+          return "1rem";
+        case "cozy":
+          return "3rem";
+        case "comfortable":
+          return "5rem";
+        default:
+          return "3rem";
+      }
+    });
+
+    const selectedKeysCount = computed<number>(() =>
+      dataLength.value === 0
+        ? 0
+        : selection.value.length === dataLength.value
+        ? -1
+        : selection.value.length
+    );
+
     return {
       collection,
       primaryKeyField,
@@ -104,8 +127,6 @@ export default defineLayout({
       fieldsInCollection,
 
       data,
-      dataLength,
-      dataKeys,
       loading,
       error,
 
@@ -114,12 +135,19 @@ export default defineLayout({
       createMandatory,
       removeMandatory,
 
-      indentation,
+      indentSize,
       labelPrimary,
       labelRight,
       labelSecondary,
 
+      isModifyEnabled,
+      isModifyDirty,
+      isSaving,
+
+      selectedKeysCount,
+
       saveModifications,
+      selectAll,
 
       refresh,
     };
@@ -148,6 +176,7 @@ export default defineLayout({
     }
 
     async function saveModifications() {
+      isSaving.value = true;
       try {
         const primKey = primaryKeyField.value?.field;
 
@@ -164,6 +193,9 @@ export default defineLayout({
       } catch (err) {
         console.error("saveModifications", err);
       }
+      isSaving.value = false;
+
+      refresh();
     }
 
     function useLayoutOptions() {
@@ -240,6 +272,12 @@ export default defineLayout({
     }
 
     function refresh() {
+      console.log("refresh");
+      isModifyEnabled.value = false;
+      isModifyDirty.value = false;
+      isSaving.value = false;
+      selection.value.splice(0, selection.value.length);
+
       getItems();
     }
 
@@ -339,6 +377,14 @@ export default defineLayout({
         function fieldExists(name: string) {
           return fields.value.findIndex((item) => item.field === name) !== -1;
         }
+      }
+    }
+
+    function selectAll() {
+      if (!selectedKeysCount.value) {
+        selection.value.splice(0, selection.value.length, ...dataKeys.value);
+      } else {
+        selection.value.splice(0, selection.value.length);
       }
     }
   },

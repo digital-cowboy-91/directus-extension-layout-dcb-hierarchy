@@ -67,6 +67,10 @@ const props = defineProps<TProps>();
         <td>{{ dataLength }}</td>
       </tr>
       <tr>
+        <td>selection</td>
+        <td>{{ selection }}</td>
+      </tr>
+      <tr>
         <td>Add Mandatory</td>
         <td>
           <button @click="createMandatory">_BUTTON_</button>
