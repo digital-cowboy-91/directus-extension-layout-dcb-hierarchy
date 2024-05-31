@@ -1,4 +1,3 @@
-// TODO BUG_ [MEDIUM]: Relational interface to the same collection shows tree-view layout as well, but select function is not implemented
 // TODO FEAT [MEDIUM]: Apply permissions
 // TODO FEAT [MEDIUM]: Error handling
 // TODO FEAT [MEDIUM]: Add generate path option from slug
@@ -135,6 +134,7 @@ export default defineLayout({
       createMandatory,
       removeMandatory,
 
+      indentation,
       indentSize,
       labelPrimary,
       labelRight,
@@ -390,11 +390,10 @@ export default defineLayout({
     }
 
     function selectOne(key: string | number) {
-      console.log("selectOne", key);
       const index = selection.value.indexOf(key);
 
       if (showSelect.value === "one") {
-        selection.value.splice(0, selection.value.length, key);
+        emit("update:selection", [key]);
         return;
       }
 
