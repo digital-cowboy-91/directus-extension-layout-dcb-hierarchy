@@ -6,30 +6,24 @@ import ViewHeader from "./components/ViewHeader.vue";
 import MandatoryCard from "./components/MandatoryCard.vue";
 import DebugTable from "./components/DebugTable.vue";
 import { TItemVirtual } from "./types";
+import { computed, ref } from "vue";
+import { refresh } from "@directus/sdk";
 
 type TProps = {
   data: TItemVirtual[];
   dataLength: number;
   dataKeys: string[] | number[];
   error?: any;
-  indentation?: "compact" | "cozy" | "comfortable";
-  isModifyEnabled: boolean;
-  isModifyDirty: boolean;
-  isSaving: boolean;
+  loading: boolean;
+
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
-  loading: boolean;
-  modifyEnable: () => void;
-  modifyDirty: () => void;
-  modifyCancel: () => void;
-  modifySave: () => void;
-  toggleBranch: (item: TItemVirtual) => void;
-  selectAll: () => void;
+  indentation?: "compact" | "cozy" | "comfortable";
+
   showSelect?: ShowSelect;
   selection: (number | string)[];
   selectMode: boolean;
-  sort: any;
 
   collection: string;
   primaryKeyField: any;
@@ -39,6 +33,10 @@ type TProps = {
   hasMandatory: boolean;
   createMandatory: () => void;
   removeMandatory: () => void;
+
+  saveModifications: () => Promise<void>;
+
+  refresh: () => void;
 };
 
 const props = defineProps<TProps>();
@@ -55,15 +53,60 @@ const indentSize = () => {
       return "3rem";
   }
 };
+
+const isModifyEnabled = ref<boolean>(false);
+const isModifyDirty = ref<boolean>(false);
+const isSaving = ref<boolean>(false);
+
+const selected = computed(() => {
+  if (props.dataLength > 0 && props.selection.length === props.dataLength)
+    return true;
+  if (props.selection.length > 0 && props.selection.length < props.dataLength)
+    return undefined;
+  return false;
+});
+
+function onModifyEnable() {
+  isModifyEnabled.value = true;
+}
+async function onModifySave() {
+  isSaving.value = true;
+  await props.saveModifications();
+  isSaving.value = false;
+
+  refreshAndReset();
+}
+function modifyCancel() {
+  refreshAndReset();
+}
+
+function refreshAndReset() {
+  refresh();
+  isModifyEnabled.value = false;
+  isModifyDirty.value = false;
+}
+
+function onSelectAll() {
+  if (!selected.value) {
+    props.selection.splice(0, props.selection.length, ...props.dataKeys);
+  } else {
+    props.selection.splice(0, props.selection.length, ...[]);
+  }
+}
 </script>
 
 <template>
   <div v-if="hasMandatory" class="tree-view">
     <ViewHeader
       v-if="!selectMode"
-      v-bind="{
-        ...$props,
-      }"
+      :is-enabled="isModifyEnabled"
+      :is-dirty="isModifyDirty"
+      :is-saving="isSaving"
+      :selected="selected"
+      @enable="onModifyEnable"
+      @save="onModifySave"
+      @cancel="modifyCancel"
+      @select-all="onSelectAll"
     />
     <TreeItem
       v-bind="{

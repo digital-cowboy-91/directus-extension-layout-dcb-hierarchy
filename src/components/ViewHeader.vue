@@ -1,57 +1,33 @@
 <script setup lang="ts">
-import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
 
 type TProps = {
-  isModifyEnabled: boolean;
-  isModifyDirty: boolean;
+  selected: boolean | undefined;
+  isEnabled: boolean;
+  isDirty: boolean;
   isSaving: boolean;
-  modifyEnable: () => void;
-  modifyDirty: () => void;
-  modifyCancel: () => void;
-  modifySave: () => void;
-  selectMode: boolean;
-  dataLength: number;
-  selection: (number | string)[];
-  dataKeys: string[] | number[];
-  showSelect?: ShowSelect;
 };
 
-const props = defineProps<TProps>();
-
-const allItemsSelected = computed<boolean>(
-  () => props.dataLength > 0 && props.selection.length === props.dataLength
-);
-
-const someItemsSelected = computed<boolean>(
-  () => props.selection.length > 0 && props.selection.length < props.dataLength
-);
-
-function onToggleSelectAll(value: boolean) {
-  if (value === true) {
-    props.selection.splice(0, props.selection.length, ...props.dataKeys);
-  } else {
-    props.selection.splice(0, props.selection.length, ...[]);
-  }
-}
+defineProps<TProps>();
+const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
 </script>
 
 <template>
   <div class="tree-view__header">
     <button
-      @click="modifyEnable"
+      @click="emit('enable')"
       class="tree-item__button"
-      :class="{ active: isModifyEnabled }"
+      :class="{ active: isEnabled }"
     >
       {{ t("sort") }}
     </button>
     <div class="tree-view__spacer" />
     <button
-      v-if="isModifyEnabled"
-      @click="modifySave"
-      :disabled="!isModifyDirty || isSaving"
+      v-if="isEnabled"
+      @click="emit('save')"
+      :disabled="!isDirty || isSaving"
       class="tree-item__button"
     >
       <span v-if="isSaving">
@@ -60,18 +36,17 @@ function onToggleSelectAll(value: boolean) {
       <span v-else>{{ t("save") }}</span>
     </button>
     <button
-      v-if="isModifyEnabled"
-      @click="modifyCancel"
+      v-if="isEnabled"
+      @click="emit('cancel')"
       :disabled="isSaving"
       class="tree-item__button"
     >
       {{ t("cancel") }}
     </button>
     <VCheckbox
-      v-if="showSelect === 'multiple' && !isModifyEnabled"
-      :model-value="allItemsSelected"
-      :indeterminate="someItemsSelected"
-      @update:model-value="onToggleSelectAll"
+      :model-value="selected === true"
+      :indeterminate="selected === undefined"
+      @click="emit('select-all')"
     />
   </div>
 </template>

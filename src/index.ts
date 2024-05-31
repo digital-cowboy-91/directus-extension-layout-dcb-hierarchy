@@ -59,10 +59,6 @@ export default defineLayout({
       removeMandatory,
     } = useMandatoryFields(fieldsInCollection);
 
-    const isModifyEnabled = ref(false);
-    const isModifyDirty = ref(false);
-    const isSaving = ref(false);
-
     const layoutOptions = useSync(props, "layoutOptions", emit);
 
     const { labelPrimary, labelRight, labelSecondary, indentation } =
@@ -123,13 +119,7 @@ export default defineLayout({
       labelRight,
       labelSecondary,
 
-      isModifyDirty,
-      isModifyEnabled,
-      isSaving,
-      modifyCancel,
-      modifyDirty,
-      modifyEnable,
-      modifySave,
+      saveModifications,
 
       refresh,
     };
@@ -157,25 +147,23 @@ export default defineLayout({
       }
     }
 
-    async function modifySave() {
-      const primKey = primaryKeyField.value?.field;
+    async function saveModifications() {
+      try {
+        const primKey = primaryKeyField.value?.field;
 
-      if (!primKey) throw new Error("Missing primary key");
+        if (!primKey) throw new Error("Missing primary key");
 
-      isSaving.value = true;
+        const destructedTree = dataDestructure(data.value);
+        const toBeUpdated = dataDiff(
+          primKey,
+          items.value as TItem[],
+          destructedTree
+        );
 
-      const destructedTree = dataDestructure(data.value);
-      const toBeUpdated = dataDiff(
-        primKey,
-        items.value as TItem[],
-        destructedTree
-      );
-
-      await itemsUpdateCollection(toBeUpdated);
-
-      isSaving.value = false;
-
-      refresh();
+        await itemsUpdateCollection(toBeUpdated);
+      } catch (err) {
+        console.error("saveModifications", err);
+      }
     }
 
     function useLayoutOptions() {
@@ -251,23 +239,7 @@ export default defineLayout({
       return { sort, fields, limit, page };
     }
 
-    function modifyEnable() {
-      isModifyEnabled.value = true;
-    }
-
-    function modifyCancel() {
-      refresh();
-    }
-
-    function modifyDirty() {
-      isModifyDirty.value = true;
-    }
-
     function refresh() {
-      isSaving.value = false;
-      isModifyDirty.value = false;
-      isModifyEnabled.value = false;
-
       getItems();
     }
 
