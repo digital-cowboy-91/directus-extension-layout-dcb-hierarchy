@@ -25,12 +25,7 @@ function handleSelection(key: string | number) {
   const index = selection.indexOf(key);
 
   if (showSelect === "one") {
-    console.log("HIT");
-
     selection.splice(0, selection.length, key);
-
-    console.log(selection);
-
     return;
   }
 

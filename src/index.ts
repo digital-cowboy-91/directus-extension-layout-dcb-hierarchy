@@ -22,6 +22,11 @@ import { ComputedRef, computed, ref, toRefs, watch } from "vue";
 import TreeView from "./TreeView.vue";
 import Options from "./Options.vue";
 import { TItem, TItemVirtual, TLayoutOptions } from "./types";
+import {
+  dataStructure,
+  dataDestructure,
+  dataDiff,
+} from "./utils/dataProcessor";
 
 export default defineLayout({
   id: "dcb-hierarchy",
@@ -86,7 +91,11 @@ export default defineLayout({
     );
 
     watch(items, () => {
-      data.value = dataStructure(items.value as TItem[]);
+      const primKey = primaryKeyField.value?.field;
+
+      if (!primKey) throw new Error("Missing primary key");
+
+      data.value = dataStructure(primKey, items.value as TItem[]);
     });
 
     return {
@@ -119,104 +128,7 @@ export default defineLayout({
       refresh,
     };
 
-    function dataStructure(data: TItem[]) {
-      const primKey = primaryKeyField.value?.field;
-
-      if (!primKey) return [];
-
-      const virtItems: TItemVirtual[] = data.map((item) => ({
-        ...item,
-        _key: {
-          field: primKey,
-          value: item[primKey],
-        },
-        _level: item._level || 0,
-        _parent_key: item._parent_key || null,
-        _sort_index: item._sort_index || null,
-        _children: [],
-        _expand_view: false,
-      }));
-
-      return virtItems.reduce(
-        (
-          acc: TItemVirtual[],
-          item: TItemVirtual,
-          _index: number,
-          arr: TItemVirtual[]
-        ) => {
-          if (!item._parent_key) {
-            acc.push(item);
-          } else {
-            const parent = arr.find((i) => i._key.value === item._parent_key);
-
-            if (parent) {
-              parent._children = parent._children || [];
-              parent._children.push(item);
-
-              parent._expand_view = true;
-            }
-          }
-
-          return acc;
-        },
-        []
-      );
-    }
-
-    function dataDestructure(data: TItemVirtual[]) {
-      const newData: TItem[] = [];
-
-      destructor(data);
-
-      return newData;
-
-      function destructor(
-        list: TItemVirtual[],
-        level: number = 0,
-        parentKey: string | number | null = null
-      ) {
-        list.forEach((item, index) => {
-          newData.push({
-            [item._key.field]: item._key.value,
-            _level: level,
-            _parent_key: parentKey,
-            _sort_index: index,
-          });
-
-          console.log("dataDestructure.desctructor");
-          if (item._children?.length) {
-            destructor(item._children, level + 1, item._key.value);
-          }
-        });
-      }
-    }
-
-    function dataDiff(original: TItem[], modified: TItem[]) {
-      const toBeUpdated: TItem[] = [];
-
-      const primKey = primaryKeyField.value?.field;
-
-      if (!primKey) return [];
-
-      modified.forEach((m) => {
-        const o = original.find((i) => i[primKey] === m[primKey]);
-
-        if (!o) throw new Error(`Item ${m[primKey]} missing in original list`);
-
-        if (
-          o._level !== m._level ||
-          o._parent_key !== m._parent_key ||
-          o._sort_index !== m._sort_index
-        ) {
-          toBeUpdated.push(m);
-        }
-      });
-
-      return toBeUpdated;
-    }
-
     async function updateDbItems(list: TItem[]) {
-      console.log("RUN updateDbItems");
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) throw new Error("Missing primary key");
@@ -240,10 +152,18 @@ export default defineLayout({
     }
 
     async function modifySave() {
+      const primKey = primaryKeyField.value?.field;
+
+      if (!primKey) throw new Error("Missing primary key");
+
       isSaving.value = true;
 
       const destructedTree = dataDestructure(data.value);
-      const toBeUpdated = dataDiff(items.value as TItem[], destructedTree);
+      const toBeUpdated = dataDiff(
+        primKey,
+        items.value as TItem[],
+        destructedTree
+      );
 
       await updateDbItems(toBeUpdated);
 
@@ -338,7 +258,6 @@ export default defineLayout({
     }
 
     function refresh() {
-      console.log("RUN refresh");
       isSaving.value = false;
       isModifyDirty.value = false;
       isModifyEnabled.value = false;
@@ -405,7 +324,6 @@ export default defineLayout({
       };
 
       function createMandatory() {
-        console.log("createMandatory");
         const collectionKey = collection.value;
 
         if (!collectionKey) throw new Error("Missing collection");
@@ -416,8 +334,6 @@ export default defineLayout({
       }
 
       function removeMandatory() {
-        console.log("removeMandatory");
-
         for (const item of mandatoryFields.value) {
           fieldsStore.deleteField(item.collection, item.field);
         }
