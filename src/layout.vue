@@ -8,7 +8,6 @@ import { computed } from "vue";
 const { t } = useI18n();
 
 type TProps = {
-  collection: string;
   data: TTreeItem[];
   dataLength: number;
   dataKeys: string[] | number[];
@@ -31,6 +30,16 @@ type TProps = {
   showSelect?: ShowSelect;
   selection: (number | string)[];
   selectMode: boolean;
+  sort: any;
+
+  collection: string;
+  primaryKeyField: any;
+  fieldsInCollection: any[];
+
+  missingMandatory: any[];
+  hasMandatory: boolean;
+  createMandatory: () => void;
+  removeMandatory: () => void;
 };
 
 const props = defineProps<TProps>();
@@ -68,16 +77,50 @@ function onToggleSelectAll(value: boolean) {
 </script>
 
 <template>
-  <div>
-    <ul>
-      <li>DEBUG</li>
-      <li>[showSelect]: {{ showSelect }}</li>
-      <li>[selection]: {{ selection }}</li>
-      <li>[selectMode]: {{ selectMode }}</li>
-    </ul>
-  </div>
-  <div v-if="loading">Loading...</div>
-  <div v-else class="tree-view">
+  <table>
+    <tbody>
+      <tr>
+        <th colspan="2">DEBUG</th>
+      </tr>
+      <tr>
+        <td>Collection</td>
+        <td>{{ collection }}</td>
+      </tr>
+      <tr>
+        <td>Primary Key</td>
+        <td>{{ Boolean(primaryKeyField) }}</td>
+      </tr>
+      <tr>
+        <td>Fields</td>
+        <td>{{ fieldsInCollection?.length }}</td>
+      </tr>
+      <tr>
+        <td>missingMandatory</td>
+        <td>{{ missingMandatory?.length }}</td>
+      </tr>
+      <tr>
+        <td>hasMandatory</td>
+        <td>{{ hasMandatory }}</td>
+      </tr>
+      <tr>
+        <td>dataLength</td>
+        <td>{{ dataLength }}</td>
+      </tr>
+      <tr>
+        <td>Add Mandatory</td>
+        <td>
+          <button @click="createMandatory">_BUTTON_</button>
+        </td>
+      </tr>
+      <tr>
+        <td>Remove Mandatory</td>
+        <td>
+          <button @click="removeMandatory">_BUTTON_</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div v-if="hasMandatory" class="tree-view">
     <div v-if="!selectMode" class="tree-view__header">
       <button
         @click="modifyEnable"
@@ -117,7 +160,6 @@ function onToggleSelectAll(value: boolean) {
         :disabled="isModifyEnabled"
       />
     </div>
-
     <TreeItem
       v-bind="{
         collection,
@@ -136,6 +178,26 @@ function onToggleSelectAll(value: boolean) {
       }"
       :style="{ '--tree-view--indentation': indentSize() }"
     />
+  </div>
+  <div v-else>
+    <VCard :style="{ margin: 'auto' }">
+      <VCardTitle> Action Required </VCardTitle>
+      <VCardText>
+        <p>
+          This extension needs to create following fields in you collection to
+          work properly:
+        </p>
+        <br />
+        <ul>
+          <li v-for="item in missingMandatory">
+            {{ item.field }}
+          </li>
+        </ul>
+      </VCardText>
+      <VCardActions>
+        <VButton @click="createMandatory">Accept</VButton>
+      </VCardActions>
+    </VCard>
   </div>
 </template>
 

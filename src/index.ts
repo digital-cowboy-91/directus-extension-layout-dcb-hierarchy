@@ -12,11 +12,12 @@ import {
   useCollection,
   useItems,
   useSdk,
+  useStores,
   useSync,
 } from "@directus/extensions-sdk";
-import { createField, createRelation, updateItem } from "@directus/sdk";
-import { Item } from "@directus/types";
-import { computed, ref, toRefs, watch } from "vue";
+import { updateItem } from "@directus/sdk";
+import { Field, Item } from "@directus/types";
+import { ComputedRef, computed, ref, toRefs, watch } from "vue";
 import { useRouter } from "vue-router";
 import LayoutComponent from "./layout.vue";
 import Options from "./options.vue";
@@ -35,36 +36,48 @@ export default defineLayout({
   setup(props, { emit }) {
     const { collection, filter, search } = toRefs(props);
 
+    const client = useSdk();
+    const router = useRouter();
+
+    const { primaryKeyField, fields: fieldsInCollection } =
+      useCollection(collection);
+
+    const fieldsStore = useStores().useFieldsStore();
+
+    const {
+      missingMandatory,
+      hasMandatory,
+      sortByMandatory,
+      createMandatory,
+      removeMandatory,
+    } = useMandatoryFields(fieldsInCollection);
+
     const isModifyEnabled = ref(false);
     const isModifyDirty = ref(false);
     const isSaving = ref(false);
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
-    const selection = useSync(props, "selection", emit);
-
-    const client = useSdk();
-    const router = useRouter();
-    const { primaryKeyField, fields: collectionFields } =
-      useCollection(collection);
 
     const { labelPrimary, labelRight, labelSecondary, indentation } =
       useLayoutOptions();
-    const { sort, fields } = useLayoutQuery();
 
-    const { items, loading, error, getItems } = useItems(collection, {
+    const { sort, fields, limit, page } = useItemsQuery();
+    const {
+      items,
+      loading,
+      error,
+      itemCount: dataLength,
+      getItems,
+    } = useItems(collection, {
       sort,
       fields,
-      limit: ref(-1),
+      limit,
       filter,
       search,
-      page: ref(1),
+      page,
     });
 
     const data = ref<TTreeItem[]>([]);
-    // const data = computed(() =>
-    //   items.value ? dataStructure(items.value) : []
-    // );
-    const dataLength = computed(() => items.value.length || 0);
     const dataKeys = computed(() =>
       items.value.map((i) => {
         if (!primaryKeyField.value) return null;
@@ -98,6 +111,14 @@ export default defineLayout({
       navigateToItem,
       primaryKeyField,
       toggleBranch,
+      sort,
+      fieldsInCollection,
+
+      missingMandatory,
+      hasMandatory,
+      createMandatory,
+      removeMandatory,
+
       refresh,
     };
 
@@ -118,8 +139,6 @@ export default defineLayout({
         _children: [],
         _expand_view: false,
       }));
-
-      if (sort.value.length === 0) return treeItems;
 
       return treeItems.reduce(
         (
@@ -167,6 +186,7 @@ export default defineLayout({
             _sort_index: index,
           });
 
+          console.log("dataDestructure.desctructor");
           if (item._children?.length) {
             destructor(item._children, level + 1, item._key.value);
           }
@@ -199,6 +219,7 @@ export default defineLayout({
     }
 
     async function updateDbItems(list: TItemExtended[]) {
+      console.log("RUN updateDbItems");
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) throw new Error("Missing primary key");
@@ -221,82 +242,17 @@ export default defineLayout({
       }
     }
 
-    async function fieldsCreateRequired() {
-      const collectionKey = collection.value;
-
-      if (!collectionKey) throw new Error("Missing collection");
-
-      const fields = [
-        {
-          field: "_parent_key",
-          type: primaryKeyField.value?.type,
-          schema: {
-            foreign_key_column: primaryKeyField.value?.field,
-            foreign_key_table: collectionKey,
-          },
-          meta: {
-            hidden: true,
-            interface: "select-dropdown-m2o",
-            readonly: true,
-            special: ["m2o"],
-          },
-        },
-        {
-          field: "_sort_index",
-          type: "integer",
-          meta: {
-            hidden: true,
-            readonly: true,
-          },
-        },
-        {
-          field: "_level",
-          type: "integer",
-          meta: {
-            hidden: true,
-            readonly: true,
-          },
-        },
-      ];
-
-      for (const item of fields) {
-        try {
-          if (fieldExists(item.field)) continue;
-
-          await client.request(createField(collectionKey, item));
-          // await store().createField(collectionKey, item);
-
-          if (item.schema && item.schema.foreign_key_table) {
-            await client.request(
-              createRelation({
-                collection: collectionKey,
-                field: item.field,
-                related_collection: item.schema.foreign_key_table,
-              })
-            );
-          }
-        } catch (err) {
-          console.error("[fieldsCreateRequired] Field" + item.field, err);
-        }
-      }
-    }
-
     async function modifySave() {
       isSaving.value = true;
 
       const destructedTree = dataDestructure(data.value);
       const toBeUpdated = dataDiff(items.value, destructedTree);
 
-      await fieldsCreateRequired();
       await updateDbItems(toBeUpdated);
 
       isSaving.value = false;
 
-      if (sort.value.length === 0) {
-        router.go();
-      } else {
-        refresh();
-      }
+      refresh();
     }
 
     function useLayoutOptions() {
@@ -336,17 +292,8 @@ export default defineLayout({
       }
     }
 
-    function useLayoutQuery() {
-      const sort = computed<string[]>(() => {
-        const sortFields = ["_level", "_sort_index", "_parent_key"];
-
-        for (const item of sortFields) {
-          if (!fieldExists(item)) return [];
-        }
-
-        return sortFields;
-      });
-
+    function useItemsQuery() {
+      const sort = computed<string[]>(() => sortByMandatory.value);
       const fields = computed<string[]>(() => {
         if (!primaryKeyField.value) return [];
 
@@ -374,7 +321,11 @@ export default defineLayout({
         return fieldsFromTemplates;
       });
 
-      return { sort, fields };
+      const limit = computed(() => (hasMandatory.value ? -1 : 0));
+
+      const page = ref(1);
+
+      return { sort, fields, limit, page };
     }
 
     function modifyEnable() {
@@ -398,6 +349,7 @@ export default defineLayout({
     }
 
     function refresh() {
+      console.log("RUN refresh");
       isSaving.value = false;
       isModifyDirty.value = false;
       isModifyEnabled.value = false;
@@ -405,14 +357,96 @@ export default defineLayout({
       getItems();
     }
 
-    function fieldExists(field: string) {
-      return (
-        collectionFields.value.findIndex((item) => item.field === field) !== -1
-      );
-    }
+    function useMandatoryFields(fields: ComputedRef<Field[]>) {
+      const mandatoryFields = computed(() => {
+        if (!collection.value || !primaryKeyField.value) return [];
 
-    function selectReset() {
-      selection.value = [];
+        const colRef = collection.value;
+        const primKeyRef = primaryKeyField.value;
+
+        return [
+          {
+            collection: colRef,
+            field: "_parent_key",
+            type: primKeyRef.type,
+            schema: {
+              foreign_key_column: primKeyRef.field,
+              foreign_key_table: colRef,
+            },
+            meta: {
+              hidden: true,
+              interface: "select-dropdown-m2o",
+              readonly: true,
+              special: ["m2o"],
+            },
+          },
+          {
+            collection: colRef,
+            field: "_sort_index",
+            type: "integer",
+            meta: {
+              hidden: true,
+              readonly: true,
+            },
+          },
+          {
+            collection: colRef,
+            field: "_level",
+            type: "integer",
+            meta: {
+              hidden: true,
+              readonly: true,
+            },
+          },
+        ];
+      });
+      const hasMandatory = ref<boolean>(false);
+      const missingMandatory = ref<any[]>([]);
+      const sortByMandatory = ref<string[]>([]);
+
+      watch(fields, () => populate(), { immediate: true });
+
+      return {
+        mandatoryFields,
+        hasMandatory,
+        missingMandatory,
+        sortByMandatory,
+        createMandatory,
+        removeMandatory,
+      };
+
+      function createMandatory() {
+        console.log("createMandatory");
+        const collectionKey = collection.value;
+
+        if (!collectionKey) throw new Error("Missing collection");
+
+        for (const item of missingMandatory.value) {
+          fieldsStore.createField(item.collection, item);
+        }
+      }
+
+      function removeMandatory() {
+        console.log("removeMandatory");
+
+        for (const item of mandatoryFields.value) {
+          fieldsStore.deleteField(item.collection, item.field);
+        }
+      }
+
+      function populate() {
+        missingMandatory.value =
+          mandatoryFields.value.filter((item) => !fieldExists(item.field)) ||
+          [];
+        hasMandatory.value = !missingMandatory.value.length;
+        sortByMandatory.value = hasMandatory.value
+          ? ["_level", "_parent_key", "_sort_index"]
+          : [];
+
+        function fieldExists(name: string) {
+          return fields.value.findIndex((item) => item.field === name) !== -1;
+        }
+      }
     }
   },
 });
