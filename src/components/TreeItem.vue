@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import type { ShowSelect } from "@directus/extensions";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
-import { TTreeItem } from "../types";
+import { TItemVirtual } from "../types";
 import { useRouter } from "vue-router";
 
 type TProps = {
   collection: string;
   isModifyDirty: boolean;
   isModifyEnabled: boolean;
-  items: TTreeItem[] | undefined;
+  items: TItemVirtual[] | undefined;
   labelPrimary?: string;
   labelRight?: string;
   labelSecondary?: string;
   modifyDirty: () => void;
-  toggleBranch: (item: TTreeItem) => void;
   showSelect?: ShowSelect;
   selection: (number | string)[];
   selectMode: boolean;
@@ -21,8 +20,6 @@ type TProps = {
 
 const { selection, showSelect } = defineProps<TProps>();
 const router = useRouter();
-
-defineEmits(["item-selected"]);
 
 function handleSelection(key: string | number) {
   const index = selection.indexOf(key);
@@ -43,6 +40,10 @@ function handleSelection(key: string | number) {
     selection.push(key);
   }
 }
+
+function toggleBranch(item: TItemVirtual) {
+  item._expand_view = !item._expand_view;
+}
 </script>
 
 <template>
@@ -59,7 +60,7 @@ function handleSelection(key: string | number) {
       class="tree-view__item"
       :data-expand="item._expand_view"
     >
-      <v-list-item
+      <VListItem
         block
         :clickable="!isModifyEnabled && !selectMode"
         @click="
@@ -69,23 +70,20 @@ function handleSelection(key: string | number) {
             router.push(`/content/${collection}/${item._key.value}`)
         "
       >
-        <v-icon
+        <VIcon
           v-if="isModifyEnabled"
           name="drag_handle"
           class="tree-view__drag-handle"
           left
           @click.stop="() => {}"
         />
-        <v-icon
-          name="arrow_right"
-          class="tree-view__expand-icon"
-          :class="{ disabled: !item._children?.length && !isModifyEnabled }"
-          left
-          @click.stop="
-            (item._children?.length || isModifyEnabled) && toggleBranch(item)
-          "
-        />
-
+        <button
+          class="tree-view__button-expand"
+          @click.stop="toggleBranch(item)"
+          :disabled="!item._children?.length && !isModifyEnabled"
+        >
+          <v-icon name="chevron_right" />
+        </button>
         <div>
           <render-template
             v-if="labelPrimary"
@@ -108,16 +106,16 @@ function handleSelection(key: string | number) {
           :item="item"
           :template="labelRight"
         />
-        <v-checkbox
+        <VCheckbox
+          v-if="!isModifyEnabled"
           :icon-on="showSelect === 'one' ? 'radio_button_checked' : undefined"
           :icon-off="
             showSelect === 'one' ? 'radio_button_unchecked' : undefined
           "
           :model-value="selection.includes(item._key.value)"
           @update:model-value="handleSelection(item._key.value)"
-          :disabled="isModifyEnabled"
         />
-      </v-list-item>
+      </VListItem>
       <TreeItem
         v-bind="{ ...$props, items: item._children }"
         class="tree-view__branch"
@@ -126,3 +124,56 @@ function handleSelection(key: string | number) {
     </div>
   </Draggable>
 </template>
+
+<style>
+.tree-view {
+  padding: var(--content-padding);
+}
+
+.tree-view__item {
+  margin-bottom: 0.5rem;
+}
+
+.tree-view__item > li {
+  gap: 1rem;
+}
+
+.tree-view__button-expand:disabled {
+  color: var(--theme--foreground-subdued);
+  cursor: not-allowed;
+  /* opacity: 0; */
+}
+
+.tree-view__button-expand > .v-icon {
+  transition: var(--fast) var(--transition);
+}
+
+.tree-view__item[data-expand="true"] > li .tree-view__button-expand > .v-icon {
+  transform: rotate(90deg);
+}
+
+.tree-view__item[data-expand="false"] .tree-view__branch {
+  display: none;
+}
+
+.tree-view__drag-area {
+  min-height: var(--theme--form--field--input--height);
+  padding: 0.5rem;
+  padding-right: 0;
+  background-color: rgba(255 255 255 / 0.1);
+  border-radius: var(--theme--border-radius);
+}
+
+.tree-view__drag-handle {
+  cursor: grab;
+}
+
+.tree-view__label-secondary {
+  font-size: 0.8rem;
+  color: var(--theme--foreground-subdued);
+}
+.tree-view__branch {
+  margin-top: 0.5rem;
+  margin-left: var(--tree-view--indentation);
+}
+</style>

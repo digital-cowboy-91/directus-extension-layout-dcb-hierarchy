@@ -4,7 +4,8 @@
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
 
-// DAY 2: API GET structure (sitemap)
+// DAY 2 [HIGH]: API GET structure (sitemap)
+// DAY 2 [LOW]: _is_dirty indicator
 
 import {
   defineLayout,
@@ -16,11 +17,11 @@ import {
   useSync,
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
-import { Field, Item } from "@directus/types";
+import { Field } from "@directus/types";
 import { ComputedRef, computed, ref, toRefs, watch } from "vue";
 import TreeView from "./TreeView.vue";
 import Options from "./Options.vue";
-import { TItemExtended, TLayoutOptions, TTreeItem } from "./types";
+import { TItem, TItemVirtual, TLayoutOptions } from "./types";
 
 export default defineLayout({
   id: "dcb-hierarchy",
@@ -75,7 +76,7 @@ export default defineLayout({
       page,
     });
 
-    const data = ref<TTreeItem[]>([]);
+    const data = ref<TItemVirtual[]>([]);
     const dataKeys = computed(() =>
       items.value.map((i) => {
         if (!primaryKeyField.value) return null;
@@ -85,7 +86,7 @@ export default defineLayout({
     );
 
     watch(items, () => {
-      data.value = dataStructure(items.value);
+      data.value = dataStructure(items.value as TItem[]);
     });
 
     return {
@@ -107,7 +108,6 @@ export default defineLayout({
       modifyEnable,
       modifySave,
       primaryKeyField,
-      toggleBranch,
       sort,
       fieldsInCollection,
 
@@ -119,12 +119,12 @@ export default defineLayout({
       refresh,
     };
 
-    function dataStructure(data: Item[]) {
+    function dataStructure(data: TItem[]) {
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) return [];
 
-      const treeItems: TTreeItem[] = data.map((item) => ({
+      const virtItems: TItemVirtual[] = data.map((item) => ({
         ...item,
         _key: {
           field: primKey,
@@ -137,12 +137,12 @@ export default defineLayout({
         _expand_view: false,
       }));
 
-      return treeItems.reduce(
+      return virtItems.reduce(
         (
-          acc: TTreeItem[],
-          item: TTreeItem,
+          acc: TItemVirtual[],
+          item: TItemVirtual,
           _index: number,
-          arr: TTreeItem[]
+          arr: TItemVirtual[]
         ) => {
           if (!item._parent_key) {
             acc.push(item);
@@ -163,15 +163,15 @@ export default defineLayout({
       );
     }
 
-    function dataDestructure(data: TTreeItem[]) {
-      const newData: TItemExtended[] = [];
+    function dataDestructure(data: TItemVirtual[]) {
+      const newData: TItem[] = [];
 
       destructor(data);
 
       return newData;
 
       function destructor(
-        list: TTreeItem[],
+        list: TItemVirtual[],
         level: number = 0,
         parentKey: string | number | null = null
       ) {
@@ -191,8 +191,8 @@ export default defineLayout({
       }
     }
 
-    function dataDiff(original: Item[], modified: TItemExtended[]) {
-      const toBeUpdated: TItemExtended[] = [];
+    function dataDiff(original: TItem[], modified: TItem[]) {
+      const toBeUpdated: TItem[] = [];
 
       const primKey = primaryKeyField.value?.field;
 
@@ -215,7 +215,7 @@ export default defineLayout({
       return toBeUpdated;
     }
 
-    async function updateDbItems(list: TItemExtended[]) {
+    async function updateDbItems(list: TItem[]) {
       console.log("RUN updateDbItems");
       const primKey = primaryKeyField.value?.field;
 
@@ -243,7 +243,7 @@ export default defineLayout({
       isSaving.value = true;
 
       const destructedTree = dataDestructure(data.value);
-      const toBeUpdated = dataDiff(items.value, destructedTree);
+      const toBeUpdated = dataDiff(items.value as TItem[], destructedTree);
 
       await updateDbItems(toBeUpdated);
 
@@ -331,10 +331,6 @@ export default defineLayout({
 
     function modifyCancel() {
       refresh();
-    }
-
-    function toggleBranch(item: TTreeItem) {
-      item._expand_view = !item._expand_view;
     }
 
     function modifyDirty() {

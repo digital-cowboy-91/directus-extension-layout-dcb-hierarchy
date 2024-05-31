@@ -68,11 +68,40 @@ function onToggleSelectAll(value: boolean) {
       {{ t("cancel") }}
     </button>
     <VCheckbox
-      v-if="showSelect === 'multiple'"
+      v-if="showSelect === 'multiple' && !isModifyEnabled"
       :model-value="allItemsSelected"
       :indeterminate="someItemsSelected"
       @update:model-value="onToggleSelectAll"
-      :disabled="isModifyEnabled"
     />
   </div>
 </template>
+
+<style>
+.tree-view__header {
+  height: var(--theme--form--field--input--height);
+  display: flex;
+  border-top: 2px solid var(--theme--border-color-subdued);
+  border-bottom: 2px solid var(--theme--border-color-subdued);
+  margin-bottom: var(--content-padding);
+  padding-right: var(--theme--form--field--input--padding);
+  gap: 1rem;
+}
+.tree-item__button {
+  color: var(--theme--foreground-subdued);
+  height: auto;
+}
+
+.tree-item__button.active {
+  color: var(--theme--primary);
+  cursor: initial;
+}
+
+.tree-item__button:enabled:hover:not(.active) {
+  color: var(--theme--foreground);
+}
+
+.tree-item__button:disabled {
+  color: var(--theme--foreground-subdued);
+  cursor: not-allowed;
+}
+</style>

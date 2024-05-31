@@ -10,19 +10,21 @@ export type TLayoutOptions = {
   indentation: TOptionIndentation;
 };
 
-export type TLayoutFields = {
-  _level: number;
+export type TMandatoryFields = {
+  _level: number | null;
   _parent_key: string | number | null;
-  _sort_index: number;
+  _sort_index: number | null;
 };
 
-export type TTreeItem = {
+export type TItem = Item & TMandatoryFields;
+
+export type TVirtualFields = {
   _key: {
     field: string;
     value: string | number;
   };
-  _children?: TTreeItem[];
-  _expand_view?: boolean;
-} & TLayoutFields;
+  _children: TItemVirtual[];
+  _expand_view: boolean;
+};
 
-export type TItemExtended = Item & TLayoutFields;
+export type TItemVirtual = TItem & TVirtualFields;
