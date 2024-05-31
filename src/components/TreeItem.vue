@@ -2,6 +2,7 @@
 import type { ShowSelect } from "@directus/extensions";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { TTreeItem } from "../types";
+import { useRouter } from "vue-router";
 
 type TProps = {
   collection: string;
@@ -12,7 +13,6 @@ type TProps = {
   labelRight?: string;
   labelSecondary?: string;
   modifyDirty: () => void;
-  navigateToItem: (collection: string, itemKey: string | number) => void;
   toggleBranch: (item: TTreeItem) => void;
   showSelect?: ShowSelect;
   selection: (number | string)[];
@@ -20,6 +20,7 @@ type TProps = {
 };
 
 const { selection, showSelect } = defineProps<TProps>();
+const router = useRouter();
 
 defineEmits(["item-selected"]);
 
@@ -60,11 +61,12 @@ function handleSelection(key: string | number) {
     >
       <v-list-item
         block
+        :clickable="!isModifyEnabled && !selectMode"
         @click="
           () =>
             !isModifyEnabled &&
             !selectMode &&
-            navigateToItem(collection, item._key.value)
+            router.push(`/content/${collection}/${item._key.value}`)
         "
       >
         <v-icon

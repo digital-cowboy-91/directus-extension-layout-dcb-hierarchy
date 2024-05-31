@@ -18,16 +18,15 @@ import {
 import { updateItem } from "@directus/sdk";
 import { Field, Item } from "@directus/types";
 import { ComputedRef, computed, ref, toRefs, watch } from "vue";
-import { useRouter } from "vue-router";
-import LayoutComponent from "./layout.vue";
-import Options from "./options.vue";
+import TreeView from "./TreeView.vue";
+import Options from "./Options.vue";
 import { TItemExtended, TLayoutOptions, TTreeItem } from "./types";
 
 export default defineLayout({
   id: "dcb-hierarchy",
   name: "DCB Hierarchy",
   icon: "box",
-  component: LayoutComponent,
+  component: TreeView,
   slots: {
     options: Options,
     sidebar: () => null,
@@ -37,7 +36,6 @@ export default defineLayout({
     const { collection, filter, search } = toRefs(props);
 
     const client = useSdk();
-    const router = useRouter();
 
     const { primaryKeyField, fields: fieldsInCollection } =
       useCollection(collection);
@@ -108,7 +106,6 @@ export default defineLayout({
       modifyDirty,
       modifyEnable,
       modifySave,
-      navigateToItem,
       primaryKeyField,
       toggleBranch,
       sort,
@@ -334,10 +331,6 @@ export default defineLayout({
 
     function modifyCancel() {
       refresh();
-    }
-
-    function navigateToItem(collection: string, itemKey: string | number) {
-      router.push(`/content/${collection}/${itemKey}`);
     }
 
     function toggleBranch(item: TTreeItem) {
