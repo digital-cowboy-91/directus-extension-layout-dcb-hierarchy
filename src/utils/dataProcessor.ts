@@ -1,17 +1,23 @@
-import { TItem, TItemVirtual } from "../types";
+import { TItem, TItemVirtual } from "./types";
 
-export function dataStructure(primKey: string, data: TItem[]) {
+export function dataStructure(
+  primKey: string,
+  slugField: string | null,
+  data: TItem[]
+) {
   const virtItems: TItemVirtual[] = data.map((item) => ({
     ...item,
     _key: {
       field: primKey,
       value: item[primKey],
     },
+    _slugField: slugField,
     _level: item._level || 0,
     _parent_key: item._parent_key || null,
     _sort_index: item._sort_index || null,
     _children: [],
     _expand_view: false,
+    _path: item._path || null,
   }));
 
   return virtItems.reduce(
@@ -50,18 +56,24 @@ export function dataDestructure(data: TItemVirtual[]) {
   function destructor(
     list: TItemVirtual[],
     level: number = 0,
-    parentKey: string | number | null = null
+    parentKey: string | number | null = null,
+    parentPath: string | null = ""
   ) {
     list.forEach((item, index) => {
+      const newPath = item._slugField
+        ? `${parentPath}/${item[item._slugField]}`
+        : null;
+
       newData.push({
         [item._key.field]: item._key.value,
         _level: level,
         _parent_key: parentKey,
         _sort_index: index,
+        _path: newPath,
       });
 
       if (item._children?.length) {
-        destructor(item._children, level + 1, item._key.value);
+        destructor(item._children, level + 1, item._key.value, newPath);
       }
     });
   }
@@ -82,7 +94,8 @@ export function dataDiff(
     if (
       o._level !== m._level ||
       o._parent_key !== m._parent_key ||
-      o._sort_index !== m._sort_index
+      o._sort_index !== m._sort_index ||
+      o._path !== m._path
     ) {
       diff.push(m);
     }

@@ -1,10 +1,10 @@
 // TODO FEAT [MEDIUM]: Apply permissions
 // TODO FEAT [MEDIUM]: Error handling
-// TODO FEAT [MEDIUM]: Add generate path option from slug
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
 
 // DAY 2 [HIGH]: API GET structure (sitemap)
+// DAY 2 [MEDIUM]: Automatically populate values on field creation
 // DAY 2 [LOW]: _is_dirty indicator
 
 import {
@@ -21,7 +21,7 @@ import { DeepPartial, Field, Relation } from "@directus/types";
 import { ComputedRef, computed, ref, toRefs, watch } from "vue";
 import Options from "./Options.vue";
 import TreeView from "./TreeView.vue";
-import { TItem, TItemVirtual, TLayoutOptions } from "./types";
+import { TItem, TItemVirtual, TLayoutOptions } from "./utils/types";
 import {
   dataDestructure,
   dataDiff,
@@ -54,6 +54,7 @@ export default defineLayout({
     const relationsStore = useRelationsStore();
     const fieldsStore = useFieldsStore();
 
+    const { slugFields } = useFilteredFields(fieldsInCollection);
     const {
       missingMandatory,
       hasMandatory,
@@ -64,7 +65,7 @@ export default defineLayout({
 
     const layoutOptions = useSync(props, "layoutOptions", emit);
 
-    const { labelPrimary, labelRight, labelSecondary, indentation } =
+    const { labelPrimary, labelRight, labelSecondary, indentation, slugField } =
       useLayoutOptions();
 
     const { sort, fields, limit, page } = useItemsQuery();
@@ -95,7 +96,11 @@ export default defineLayout({
 
       if (!primKey) throw new Error("Missing primary key");
 
-      data.value = dataStructure(primKey, items.value as TItem[]);
+      data.value = dataStructure(
+        primKey,
+        slugField.value,
+        items.value as TItem[]
+      );
     });
 
     const indentSize = computed(() => {
@@ -125,6 +130,8 @@ export default defineLayout({
       sort,
       fieldsInCollection,
 
+      slugFields,
+
       data,
       loading,
       error,
@@ -134,11 +141,13 @@ export default defineLayout({
       createMandatory,
       removeMandatory,
 
-      indentation,
-      indentSize,
       labelPrimary,
       labelRight,
       labelSecondary,
+      indentation,
+      slugField,
+
+      indentSize,
 
       isModifyEnabled,
       isModifyDirty,
@@ -159,7 +168,7 @@ export default defineLayout({
       if (!primKey) throw new Error("Missing primary key");
 
       for (const item of list) {
-        const { _level, _parent_key, _sort_index } = item;
+        const { _level, _parent_key, _sort_index, _path } = item;
         const key = item[primKey];
 
         try {
@@ -168,6 +177,7 @@ export default defineLayout({
               _level,
               _parent_key,
               _sort_index,
+              _path,
             })
           );
         } catch (err) {
@@ -214,7 +224,15 @@ export default defineLayout({
         "cozy"
       );
 
-      return { labelPrimary, labelRight, labelSecondary, indentation };
+      const slugField = createViewOption<string | null>("slugField", null);
+
+      return {
+        labelPrimary,
+        labelRight,
+        labelSecondary,
+        indentation,
+        slugField,
+      };
 
       function createViewOption<T>(
         key: keyof TLayoutOptions,
@@ -260,6 +278,10 @@ export default defineLayout({
 
         if (labelRight.value) {
           fieldsFromTemplates.push(...getFieldsFromTemplate(labelRight.value));
+        }
+
+        if (slugField.value) {
+          fieldsFromTemplates.push(slugField.value);
         }
 
         return fieldsFromTemplates;
@@ -318,6 +340,15 @@ export default defineLayout({
             collection: colRef,
             field: "_level",
             type: "integer",
+            meta: {
+              hidden: true,
+              readonly: true,
+            },
+          },
+          {
+            collection: colRef,
+            field: "_path",
+            type: "string",
             meta: {
               hidden: true,
               readonly: true,
@@ -398,6 +429,14 @@ export default defineLayout({
       }
 
       if (index === -1) selection.value.push(key);
+    }
+
+    function useFilteredFields(fields: ComputedRef<Field[]>) {
+      const slugFields = computed(() =>
+        fields.value.filter((item) => item.meta?.options?.slug)
+      );
+
+      return { slugFields };
     }
   },
 });
