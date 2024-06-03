@@ -8,6 +8,7 @@ type TProps = {
   modifyMode: boolean;
   isDirty: boolean;
   isSaving: boolean;
+  canUpdate: boolean;
 };
 
 defineProps<TProps>();
@@ -17,6 +18,7 @@ const emit = defineEmits(["enable", "save", "cancel", "select-all"]);
 <template>
   <div class="tree-view__header">
     <button
+      v-if="canUpdate"
       @click="emit('enable')"
       class="tree-item__button"
       :class="{ active: modifyMode }"

@@ -2,7 +2,7 @@ import { TItem, TItemVirtual } from "./types";
 
 export function dataStructure(
   primKey: string,
-  slugField: string | null,
+  fieldSlug: string | null,
   data: TItem[]
 ) {
   const virtItems: TItemVirtual[] = data.map((item) => ({
@@ -11,7 +11,7 @@ export function dataStructure(
       field: primKey,
       value: item[primKey],
     },
-    _slugField: slugField,
+    _fieldSlug: fieldSlug,
     _level: item._level || 0,
     _parent_key: item._parent_key || null,
     _sort_index: item._sort_index || null,
@@ -60,8 +60,8 @@ export function dataDestructure(data: TItemVirtual[]) {
     parentPath: string | null = ""
   ) {
     list.forEach((item, index) => {
-      const newPath = item._slugField
-        ? `${parentPath}/${item[item._slugField]}`
+      const newPath = item._fieldSlug
+        ? `${parentPath}/${item[item._fieldSlug]}`
         : null;
 
       newData.push({

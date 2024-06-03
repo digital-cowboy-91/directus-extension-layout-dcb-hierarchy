@@ -1,4 +1,3 @@
-// TODO FEAT [MEDIUM]: Apply permissions
 // TODO FEAT [MEDIUM]: Error handling
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
@@ -17,16 +16,21 @@ import {
   useSync,
 } from "@directus/extensions-sdk";
 import { updateItem } from "@directus/sdk";
-import { DeepPartial, Field, Relation } from "@directus/types";
-import { ComputedRef, computed, ref, toRefs, watch } from "vue";
+import { DeepPartial, Relation } from "@directus/types";
+import { computed, ref, toRefs, watch } from "vue";
 import Options from "./Options.vue";
 import TreeView from "./TreeView.vue";
-import { TItem, TItemVirtual, TLayoutOptions } from "./utils/types";
 import {
   dataDestructure,
   dataDiff,
   dataStructure,
 } from "./utils/dataProcessor";
+import {
+  TItem,
+  TItemVirtual,
+  TLayoutOptions,
+  TMandatoryOption,
+} from "./utils/types";
 
 export default defineLayout({
   id: "dcb-hierarchy",
@@ -44,30 +48,58 @@ export default defineLayout({
     const isModifyEnabled = ref<boolean>(false);
     const isModifyDirty = ref<boolean>(false);
     const isSaving = ref<boolean>(false);
-
-    const client = useSdk();
-
-    const { primaryKeyField, fields: fieldsInCollection } =
-      useCollection(collection);
-
-    const { useFieldsStore, useRelationsStore } = useStores();
-    const relationsStore = useRelationsStore();
-    const fieldsStore = useFieldsStore();
-
-    const { slugFields } = useFilteredFields(fieldsInCollection);
-    const {
-      missingMandatory,
-      hasMandatory,
-      sortByMandatory,
-      createMandatory,
-      removeMandatory,
-    } = useMandatoryFields(fieldsInCollection);
-
     const layoutOptions = useSync(props, "layoutOptions", emit);
 
-    const { labelPrimary, labelRight, labelSecondary, indentation, slugField } =
-      useLayoutOptions();
+    const client = useSdk();
+    const { primaryKeyField, fields: fieldsInCollection } =
+      useCollection(collection);
+    const {
+      useUserStore,
+      useFieldsStore,
+      useRelationsStore,
+      usePermissionsStore,
+    } = useStores();
+    const userStore = useUserStore();
+    const permissionsStore = usePermissionsStore();
+    const fieldsStore = useFieldsStore();
+    const relationsStore = useRelationsStore();
 
+    const userIsAdmin = computed(() => userStore.isAdmin || false);
+
+    const {
+      labelPrimary,
+      labelRight,
+      labelSecondary,
+      indentation,
+      fieldLevel,
+      fieldParentKey,
+      fieldSortIndex,
+      fieldSlug,
+      fieldPath,
+    } = useLayoutOptions();
+
+    const indentSize = computed(() => {
+      switch (indentation.value) {
+        case "compact":
+          return "1rem";
+        case "cozy":
+          return "3rem";
+        case "comfortable":
+          return "5rem";
+        default:
+          return "3rem";
+      }
+    });
+
+    const {
+      mandatoryFields,
+      hasMandatory,
+      canReadMandatory,
+      canUpdateMandatory,
+      missingMandatory,
+      sortByMandatory,
+      createMandatory,
+    } = useMandatoryFields();
     const { sort, fields, limit, page } = useItemsQuery();
     const { items, loading, error, itemCount, getItems } = useItems(
       collection,
@@ -98,22 +130,9 @@ export default defineLayout({
 
       data.value = dataStructure(
         primKey,
-        slugField.value,
+        fieldSlug.value,
         items.value as TItem[]
       );
-    });
-
-    const indentSize = computed(() => {
-      switch (indentation.value) {
-        case "compact":
-          return "1rem";
-        case "cozy":
-          return "3rem";
-        case "comfortable":
-          return "5rem";
-        default:
-          return "3rem";
-      }
     });
 
     const selectedKeysCount = computed<number>(() =>
@@ -130,22 +149,28 @@ export default defineLayout({
       sort,
       fieldsInCollection,
 
-      slugFields,
+      userIsAdmin,
 
       data,
       loading,
       error,
 
+      mandatoryFields,
       missingMandatory,
       hasMandatory,
+      canReadMandatory,
+      canUpdateMandatory,
       createMandatory,
-      removeMandatory,
 
       labelPrimary,
       labelRight,
       labelSecondary,
       indentation,
-      slugField,
+      fieldLevel,
+      fieldParentKey,
+      fieldSortIndex,
+      fieldSlug,
+      fieldPath,
 
       indentSize,
 
@@ -224,14 +249,28 @@ export default defineLayout({
         "cozy"
       );
 
-      const slugField = createViewOption<string | null>("slugField", null);
+      const fieldLevel = createViewOption<string | null>("fieldLevel", null);
+      const fieldParentKey = createViewOption<string | null>(
+        "fieldParentKey",
+        null
+      );
+      const fieldSortIndex = createViewOption<string | null>(
+        "fieldSortIndex",
+        null
+      );
+      const fieldSlug = createViewOption<string | null>("fieldSlug", null);
+      const fieldPath = createViewOption<string | null>("fieldPath", null);
 
       return {
         labelPrimary,
         labelRight,
         labelSecondary,
         indentation,
-        slugField,
+        fieldLevel,
+        fieldParentKey,
+        fieldSortIndex,
+        fieldSlug,
+        fieldPath,
       };
 
       function createViewOption<T>(
@@ -280,8 +319,8 @@ export default defineLayout({
           fieldsFromTemplates.push(...getFieldsFromTemplate(labelRight.value));
         }
 
-        if (slugField.value) {
-          fieldsFromTemplates.push(slugField.value);
+        if (fieldSlug.value) {
+          fieldsFromTemplates.push(fieldSlug.value);
         }
 
         return fieldsFromTemplates;
@@ -304,8 +343,8 @@ export default defineLayout({
       getItems();
     }
 
-    function useMandatoryFields(fields: ComputedRef<Field[]>) {
-      const mandatoryFields = computed(() => {
+    function useMandatoryFields() {
+      const options = computed<TMandatoryOption[]>(() => {
         if (!collection.value || !primaryKeyField.value) return [];
 
         const colRef = collection.value;
@@ -313,70 +352,117 @@ export default defineLayout({
 
         return [
           {
-            collection: colRef,
-            field: "_parent_key",
-            type: primKeyRef.type,
-            schema: {
-              foreign_key_column: primKeyRef.field,
-              foreign_key_table: colRef,
-            },
-            meta: {
-              hidden: true,
-              interface: "select-dropdown-m2o",
-              readonly: true,
-              special: ["m2o"],
-            },
-          },
-          {
-            collection: colRef,
-            field: "_sort_index",
-            type: "integer",
-            meta: {
-              hidden: true,
-              readonly: true,
+            option: fieldParentKey?.value,
+            required: true,
+            default: {
+              collection: colRef,
+              field: "_parent_key",
+              type: primKeyRef.type,
+              schema: {
+                foreign_key_column: primKeyRef.field,
+                foreign_key_table: colRef,
+              },
+              meta: {
+                hidden: true,
+                interface: "select-dropdown-m2o",
+                readonly: true,
+                special: ["m2o"],
+              },
             },
           },
           {
-            collection: colRef,
-            field: "_level",
-            type: "integer",
-            meta: {
-              hidden: true,
-              readonly: true,
+            option: fieldSortIndex?.value,
+            required: true,
+            default: {
+              collection: colRef,
+              field: "_sort_index",
+              type: "integer",
+              meta: {
+                hidden: true,
+                readonly: true,
+              },
             },
           },
           {
-            collection: colRef,
-            field: "_path",
-            type: "string",
-            meta: {
-              hidden: true,
-              readonly: true,
+            option: fieldLevel?.value,
+            required: true,
+            default: {
+              collection: colRef,
+              field: "_level",
+              type: "integer",
+              meta: {
+                hidden: true,
+                readonly: true,
+              },
+            },
+          },
+          {
+            option: fieldPath?.value,
+            required: fieldSlug?.value !== null,
+            default: {
+              collection: colRef,
+              field: "_path",
+              type: "string",
+              meta: {
+                hidden: true,
+                readonly: true,
+              },
             },
           },
         ];
       });
-      const hasMandatory = ref<boolean>(false);
-      const missingMandatory = ref<any[]>([]);
-      const sortByMandatory = ref<string[]>([]);
 
-      watch(fields, () => populate(), { immediate: true });
+      const mandatoryFields = computed(
+        () => options.value.filter((o) => o.required) || []
+      );
+
+      const missingMandatory = computed(() =>
+        mandatoryFields.value.filter((o) => !o.option)
+      );
+
+      const hasMandatory = computed(() => missingMandatory.value.length === 0);
+
+      const sortByMandatory = computed(() =>
+        hasMandatory.value
+          ? [fieldLevel.value!, fieldParentKey.value!, fieldSortIndex.value!]
+          : []
+      );
+
+      const canReadMandatory = computed(
+        () => hasMandatory.value && checkPermission("read")
+      );
+      const canUpdateMandatory = computed(
+        () => hasMandatory.value && checkPermission("update")
+      );
+
+      watch(
+        canReadMandatory,
+        (newVal, oldVal) => {
+          console.log("canReadMandatory", newVal, oldVal);
+        },
+        { immediate: true }
+      );
+
+      watch(
+        canUpdateMandatory,
+        (newVal, oldVal) => {
+          console.log("canUpdateMandatory", newVal, oldVal);
+        },
+        { immediate: true }
+      );
 
       return {
         mandatoryFields,
         hasMandatory,
+        canReadMandatory,
+        canUpdateMandatory,
         missingMandatory,
         sortByMandatory,
         createMandatory,
-        removeMandatory,
       };
 
       async function createMandatory() {
-        const collectionKey = collection.value;
-
-        if (!collectionKey) throw new Error("Missing collection");
-
-        for (const item of missingMandatory.value) {
+        for (const item of missingMandatory.value.default) {
           const { collection, field, schema } = item;
 
           fieldsStore.createField(collection, item).then(() => {
@@ -391,24 +477,19 @@ export default defineLayout({
         }
       }
 
-      function removeMandatory() {
-        for (const item of mandatoryFields.value) {
-          fieldsStore.deleteField(item.collection, item.field);
-        }
-      }
+      function checkPermission(
+        action: "create" | "read" | "update" | "delete"
+      ) {
+        if (!collection.value) throw new Error("Missing collection");
+        if (userIsAdmin.value) return true;
 
-      function populate() {
-        missingMandatory.value =
-          mandatoryFields.value.filter((item) => !fieldExists(item.field)) ||
+        const fields =
+          permissionsStore.getPermission(collection.value, action)?.fields ||
           [];
-        hasMandatory.value = !missingMandatory.value.length;
-        sortByMandatory.value = hasMandatory.value
-          ? ["_level", "_parent_key", "_sort_index"]
-          : [];
 
-        function fieldExists(name: string) {
-          return fields.value.findIndex((item) => item.field === name) !== -1;
-        }
+        if (fields[0] === "*") return true;
+
+        return mandatoryFields.value.every((o) => fields.includes(o.option));
       }
     }
 
@@ -429,14 +510,6 @@ export default defineLayout({
       }
 
       if (index === -1) selection.value.push(key);
-    }
-
-    function useFilteredFields(fields: ComputedRef<Field[]>) {
-      const slugFields = computed(() =>
-        fields.value.filter((item) => item.meta?.options?.slug)
-      );
-
-      return { slugFields };
     }
   },
 });

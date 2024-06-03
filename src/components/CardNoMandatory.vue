@@ -10,14 +10,14 @@ defineProps<TProps>();
   <VCard :style="{ margin: 'auto' }">
     <VCardTitle> Action Required </VCardTitle>
     <VCardText>
-      <p>
-        This extension needs to create following fields in you collection to
-        work properly:
-      </p>
+      <VHighlight
+        text="To use Tree View layout, select the appropriate fields in Layout Options > Configuration, or click the button below to generate following default fields:"
+        :query="['Layout Options > Configuration']"
+      />
       <br />
       <ul>
-        <li v-for="item in missingMandatory">
-          {{ item.field }}
+        <li v-for="{ default: { field } } in missingMandatory">
+          {{ field }}
         </li>
       </ul>
     </VCardText>

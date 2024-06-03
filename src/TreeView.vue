@@ -3,10 +3,11 @@ import type { ShowSelect } from "@directus/extensions";
 
 import { Ref, toRefs } from "vue";
 import DebugTable from "./components/DebugTable.vue";
-import MandatoryCard from "./components/MandatoryCard.vue";
+import CardNoMandatory from "./components/CardNoMandatory.vue";
+import CardNoPermission from "./components/CardNoPermission.vue";
 import TreeItem from "./components/TreeItem.vue";
 import ViewHeader from "./components/ViewHeader.vue";
-import { TItemVirtual } from "./types";
+import { TItemVirtual } from "./utils/types";
 
 type TProps = {
   collection: string;
@@ -22,8 +23,12 @@ type TProps = {
 
   missingMandatory: any[];
   hasMandatory: boolean;
+  canReadMandatory: boolean;
+  canUpdateMandatory: boolean;
   createMandatory: () => void;
   removeMandatory: () => void;
+
+  userCanRead: boolean;
 
   isModifyDirty: Ref<boolean>;
   isModifyEnabled: Ref<boolean>;
@@ -54,13 +59,21 @@ const {
 </script>
 
 <template>
-  <div v-if="hasMandatory" class="tree-view">
+  <CardNoPermission v-if="!canReadMandatory" />
+  <CardNoMandatory
+    v-else-if="!hasMandatory"
+    v-bind="{
+      ...$props,
+    }"
+  />
+  <div v-else class="tree-view">
     <ViewHeader
       v-if="!selectMode"
       :modify-mode="isModifyEnabled"
       :is-dirty="isModifyDirty"
       :is-saving="isSaving"
       :selected="selectedKeysCount"
+      :can-update="canUpdateMandatory"
       @enable="isModifyEnabled = true"
       @save="saveModifications"
       @cancel="refresh"
@@ -82,13 +95,6 @@ const {
         showSelect,
       }"
       :style="{ '--tree-view--indentation': indentSize }"
-    />
-  </div>
-  <div v-else>
-    <MandatoryCard
-      v-bind="{
-        ...$props,
-      }"
     />
   </div>
   <DebugTable
