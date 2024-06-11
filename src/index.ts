@@ -1,4 +1,5 @@
 // TODO FEAT [MEDIUM]: Error handling
+// TODO BUG_ [MEDIUM]: Tree View preset not used when in Select Mode
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
 
@@ -33,8 +34,8 @@ import {
 } from "./utils/types";
 
 export default defineLayout({
-  id: "dcb-hierarchy",
-  name: "DCB Hierarchy",
+  id: "dcb-treeview",
+  name: "DCB TreeView",
   icon: "box",
   component: TreeView,
   slots: {

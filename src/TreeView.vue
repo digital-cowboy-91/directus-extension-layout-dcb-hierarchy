@@ -12,6 +12,8 @@ import { TItemVirtual } from "./utils/types";
 type TProps = {
   collection: string;
 
+  userIsAdmin: boolean;
+
   data: TItemVirtual[];
   error?: any;
   loading: boolean;
@@ -59,13 +61,13 @@ const {
 </script>
 
 <template>
-  <CardNoPermission v-if="!canReadMandatory" />
   <CardNoMandatory
-    v-else-if="!hasMandatory"
+    v-if="userIsAdmin && !hasMandatory"
     v-bind="{
       ...$props,
     }"
   />
+  <CardNoPermission v-else-if="!canReadMandatory" />
   <div v-else class="tree-view">
     <ViewHeader
       v-if="!selectMode"
