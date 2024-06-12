@@ -146,8 +146,15 @@ function navigateTo(itemKey: string | number) {
   min-height: var(--theme--form--field--input--height);
   padding: 0.5rem;
   padding-right: 0;
-  background-color: rgba(255 255 255 / 0.1);
   border-radius: var(--theme--border-radius);
+}
+
+body.light .tree-view__drag-area {
+  background-color: rgba(0 0 0 / 0.1);
+}
+
+body.body .tree-view__drag-area {
+  background-color: rgba(255 255 255 / 0.1);
 }
 
 .tree-view__drag-handle {
