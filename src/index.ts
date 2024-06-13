@@ -2,6 +2,8 @@
 // TODO BUG_ [MEDIUM]: Tree View preset not used when in Select Mode
 // TODO BUG_ [LOW]: Filter by required fields fails - TypeError: Rn.flatMap is not a function
 // TODO FEAT [LOW]: Groups (e.g. multiple navigations - Navbar, Footer, Sidebar, etc.)
+// TODO FEAT [LOW]: Dis/allow children
+// TODO FEAT [LOW]: Max level depth
 
 // DAY 2 [HIGH]: API GET structure (sitemap)
 // DAY 2 [MEDIUM]: Automatically populate values on field creation
@@ -27,7 +29,6 @@ import {
   dataStructure,
 } from "./utils/dataProcessor";
 import {
-  TItem,
   TItemVirtual,
   TLayoutOptions,
   TMandatoryOption,
@@ -132,7 +133,7 @@ export default defineLayout({
       data.value = dataStructure(
         primKey,
         fieldSlug.value,
-        items.value as TItem[]
+        items.value
       );
     });
 
@@ -188,7 +189,7 @@ export default defineLayout({
       refresh,
     };
 
-    async function itemsUpdateCollection(list: TItem[]) {
+    async function itemsUpdateCollection(list: TItemVirtual[]) {
       const primKey = primaryKeyField.value?.field;
 
       if (!primKey) throw new Error("Missing primary key");
@@ -222,7 +223,7 @@ export default defineLayout({
         const destructedTree = dataDestructure(data.value);
         const toBeUpdated = dataDiff(
           primKey,
-          items.value as TItem[],
+          items.value,
           destructedTree
         );
 
@@ -463,8 +464,8 @@ export default defineLayout({
       };
 
       async function createMandatory() {
-        for (const item of missingMandatory.value.default) {
-          const { collection, field, schema } = item;
+        for (const item of missingMandatory.value) {
+          const { collection, field, schema } = item.default;
 
           fieldsStore.createField(collection, item).then(() => {
             if (!schema?.foreign_key_table) return;

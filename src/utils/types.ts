@@ -20,15 +20,6 @@ export type TMandatoryOption = {
   default: DeepPartial<Field>;
 };
 
-export type TMandatoryFields = {
-  _level: number | null;
-  _parent_key: string | number | null;
-  _sort_index: number | null;
-  _path: string | null;
-};
-
-export type TItem = Item & TMandatoryFields;
-
 export type TVirtualFields = {
   _key: {
     field: string;
@@ -39,4 +30,4 @@ export type TVirtualFields = {
   _expand_view: boolean;
 };
 
-export type TItemVirtual = TItem & TVirtualFields;
+export type TItemVirtual = Item & TVirtualFields;

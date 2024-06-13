@@ -153,7 +153,7 @@ body.light .tree-view__drag-area {
   background-color: rgba(0 0 0 / 0.1);
 }
 
-body.body .tree-view__drag-area {
+body.dark .tree-view__drag-area {
   background-color: rgba(255 255 255 / 0.1);
 }
 
