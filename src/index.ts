@@ -78,6 +78,7 @@ export default defineLayout({
       fieldSortIndex,
       fieldSlug,
       fieldPath,
+      fieldGroup,
     } = useLayoutOptions();
 
     const indentSize = computed(() => {
@@ -173,6 +174,7 @@ export default defineLayout({
       fieldSortIndex,
       fieldSlug,
       fieldPath,
+      fieldGroup,
 
       indentSize,
 
@@ -262,6 +264,7 @@ export default defineLayout({
       );
       const fieldSlug = createViewOption<string | null>("fieldSlug", null);
       const fieldPath = createViewOption<string | null>("fieldPath", null);
+      const fieldGroup = createViewOption<string | null>("fieldGroup", null);
 
       return {
         labelPrimary,
@@ -273,6 +276,7 @@ export default defineLayout({
         fieldSortIndex,
         fieldSlug,
         fieldPath,
+        fieldGroup,
       };
 
       function createViewOption<T>(

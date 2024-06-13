@@ -1,5 +1,3 @@
-<!-- TODO [MEDIUM]: Max level field -->
-
 <script setup lang="ts">
 import { useSync } from "@directus/extensions-sdk";
 import { Field } from "@directus/types";
@@ -31,6 +29,7 @@ const emit = defineEmits([
   "update:fieldSortIndex",
   "update:fieldSlug",
   "update:fieldPath",
+  "update:fieldGroup"
 ]);
 
 const labelPrimarySync = useSync(props, "labelPrimary", emit);
@@ -43,6 +42,7 @@ const fieldParentKeySync = useSync(props, "fieldParentKey", emit);
 const fieldSortIndexSync = useSync(props, "fieldSortIndex", emit);
 const fieldSlugSync = useSync(props, "fieldSlug", emit);
 const fieldPathSync = useSync(props, "fieldPath", emit);
+const fieldGroupSync = useSync(props, "fieldGroup", emit)
 
 const fieldsWithSlug = computed(() =>
   fieldsInCollection.value.filter((item) => item.meta?.options?.slug)
@@ -59,6 +59,11 @@ const fieldsWithStringType = computed(() =>
 const fieldsWithM2O = computed(() =>
   fieldsInCollection.value.filter((item) => item.meta?.special?.includes("m2o"))
 );
+
+const fieldsWithSelect = computer(() => 
+fieldsInCollection.value.filter((item) => item.meta?.interface === "select-dropdown")
+)
+
 </script>
 
 <template>
@@ -161,6 +166,17 @@ const fieldsWithM2O = computed(() =>
           show-deselect
         />
       </div>
+      <!-- <div class="field">
+        <div class="type-label">Group</div>
+        <v-select
+          v-model="fieldGroupSync"
+          item-value="field"
+          item-text="name"
+          :items="fieldsWithSelect"
+          show-deselect
+          :disabled="fieldsWithSelect.length === 0"
+        />
+      </div> -->
     </VTabItem>
   </VTabsItems>
 </template>

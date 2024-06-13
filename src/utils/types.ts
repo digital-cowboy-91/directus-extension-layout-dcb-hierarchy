@@ -12,6 +12,7 @@ export type TLayoutOptions = {
   fieldSortIndex: number | null;
   fieldSlug: string | null;
   fieldPath: string | null;
+  fieldGroup: string | null;
 };
 
 export type TMandatoryOption = {
