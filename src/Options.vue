@@ -60,7 +60,7 @@ const fieldsWithM2O = computed(() =>
   fieldsInCollection.value.filter((item) => item.meta?.special?.includes("m2o"))
 );
 
-const fieldsWithSelect = computer(() => 
+const fieldsWithSelect = computed(() => 
 fieldsInCollection.value.filter((item) => item.meta?.interface === "select-dropdown")
 )
 
@@ -166,7 +166,7 @@ fieldsInCollection.value.filter((item) => item.meta?.interface === "select-dropd
           show-deselect
         />
       </div>
-      <!-- <div class="field">
+      <div class="field">
         <div class="type-label">Group</div>
         <v-select
           v-model="fieldGroupSync"
@@ -176,7 +176,7 @@ fieldsInCollection.value.filter((item) => item.meta?.interface === "select-dropd
           show-deselect
           :disabled="fieldsWithSelect.length === 0"
         />
-      </div> -->
+      </div>
     </VTabItem>
   </VTabsItems>
 </template>
