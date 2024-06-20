@@ -13,6 +13,10 @@ export function dataStructure(
     },
     _fieldSlug: fieldSlug,
     _level: item._level || 0,
+    get _gen_level() {
+      console.log(this.parent);
+      return this.parent ? this.parent._gen_level + 1 : 0;
+    },
     _parent_key: item._parent_key || null,
     _sort_index: item._sort_index || null,
     _children: [],

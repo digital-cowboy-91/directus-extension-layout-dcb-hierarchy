@@ -28,11 +28,7 @@ import {
   dataDiff,
   dataStructure,
 } from "./utils/dataProcessor";
-import {
-  TItemVirtual,
-  TLayoutOptions,
-  TMandatoryOption,
-} from "./utils/types";
+import { TItemVirtual, TLayoutOptions, TMandatoryOption } from "./utils/types";
 
 export default defineLayout({
   id: "dcb-treeview",
@@ -131,11 +127,9 @@ export default defineLayout({
 
       if (!primKey) throw new Error("Missing primary key");
 
-      data.value = dataStructure(
-        primKey,
-        fieldSlug.value,
-        items.value
-      );
+      data.value = dataStructure(primKey, fieldSlug.value, items.value);
+
+      console.log(JSON.stringify(data.value, null, 2));
     });
 
     const selectedKeysCount = computed<number>(() =>
@@ -223,11 +217,7 @@ export default defineLayout({
         if (!primKey) throw new Error("Missing primary key");
 
         const destructedTree = dataDestructure(data.value);
-        const toBeUpdated = dataDiff(
-          primKey,
-          items.value,
-          destructedTree
-        );
+        const toBeUpdated = dataDiff(primKey, items.value, destructedTree);
 
         await itemsUpdateCollection(toBeUpdated);
       } catch (err) {
